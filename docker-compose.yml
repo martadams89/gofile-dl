@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  gofile-dl:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # image: martadams89/gofile-dl:latest
+    ports:
+      - "2355:2355"
+    volumes:
+      - .:/app
+    environment:
+      - PORT=2355
+      - BASE_DIR=/app

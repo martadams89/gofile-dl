@@ -1,0 +1,42 @@
+# Configuration file for MegaLinter
+# See all available variables at https://megalinter.io/configuration/ and in linters documentation
+
+APPLY_FIXES: all
+# ENABLE: # If you use ENABLE variable, all other languages/formats/tooling formats will be disabled by default
+# ENABLE_LINTERS: # If you use ENABLE_LINTERS variable, all other linters will be disabled by default
+DISABLE_LINTERS:
+  - BASH_EXEC
+  - MARKDOWN_MARKDOWN_LINK_CHECK
+  - REPOSITORY_TRUFFLEHOG
+PRINT_ALL_FILES: false
+FILTER_REGEX_EXCLUDE: '(\.venv|docs/overrides|TEMPLATES)'
+JSON_JSONLINT_FILTER_REGEX_EXCLUDE: '(\.vscode/)'
+YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: '(templates/\.mega-linter\.yml)'
+YAML_PRETTIER_FILTER_REGEX_EXCLUDE: '(templates/\.mega-linter\.yml|mkdocs\.yml)'
+YAML_V8R_FILTER_REGEX_EXCLUDE: '(descriptors|templates/\.mega-linter\.yml|\.codecov\.yml)'
+BASH_FILTER_REGEX_EXCLUDE: "(lib)"
+MARKDOWN_FILTER_REGEX_EXCLUDE: '(license\.md|docs/licenses|CHANGELOG\.md)'
+SPELL_VALE_FILE_EXTENSIONS:
+  - .md
+SPELL_CSPELL_DISABLE_ERRORS: true
+SPELL_FILTER_REGEX_EXCLUDE: "(.github)"
+SPELL_LYCHEE_FILTER_REGEX_EXCLUDE: (README.md|version.txt|CHANGELOG.md)
+ACTION_ACTIONLINT_ARGUMENTS: "-ignore 'Double quote to prevent globbing and word splitting [shellcheck]'"
+DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore CKV_DOCKER_3 --ignore SC1091 --ignore DL3016 --ignore DL3042 --ignore DL3007 --ignore DL3008 --ignore DL3015 --ignore DL3009 --ignore DL3033 --ignore SC2086 --ignore SC22276"
+REPOSITORY_CHECKOV_ARGUMENTS: "--skip-check CKV2_GHA_1,CKV_GHA_7"
+REPOSITORY_TRIVY_ARGUMENTS:
+  - "--skip-dirs"
+  - ".automation/test"
+  - "--skip-dirs"
+  - ".venv"
+  - "--skip-files"
+  - "Dockerfile"
+REPOSITORY_KICS_ARGUMENTS: "--exclude-queries d3499f6d-1651-41bb-a9a7-de925fea487b,555ab8f9-2001-455e-a077-f2d0f41e2fb9,6b610c50-99fb-4ef0-a5f3-e312fd945bc3,6452c424-1d92-4deb-bb18-a03e95d579c4,610e266e-6c12-4bca-9925-1ed0cd29742b,bb9ac4f7-e13b-423d-a010-c74a1bfbe492,698ed579-b239-4f8f-a388-baa4bcb13ef8,451d79dc-0588-476a-ad03-3c7f0320abb3,ce76b7d0-9e77-464d-b86f-c5c48e03e22d,fd54f200-402c-4333-a5a4-36ef6709af2f"
+SHOW_ELAPSED_TIME: true
+FLAVOR_SUGGESTIONS: false
+EMAIL_REPORTER: false
+FILEIO_REPORTER: false
+JSON_REPORTER: true
+GITHUB_STATUS_REPORTER: false
+PLUGINS:
+  - https://raw.githubusercontent.com/oxsecurity/megalinter/main/.automation/test/mega-linter-plugin-test/test.megalinter-descriptor.yml
