@@ -24,7 +24,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -34,7 +34,7 @@ jobs:
       - name: Run tests
         run: |
           python -m unittest discover -s tests
-          
+
       - name: Scan Dockerfile vulnerabilities using Checkov
         id: checkov
         uses: bridgecrewio/checkov-action@master
@@ -43,5 +43,3 @@ jobs:
           framework: dockerfile
           quiet: true
           container_user: 1000
-
-
