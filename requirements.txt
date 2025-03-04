@@ -1,7 +1,10 @@
 certifi==2024.2.2
 charset-normalizer==3.3.2
 idna==3.7
-pathvalidate==3.2.0
-requests==2.31.0
+pathvalidate>=2.5.0
+requests>=2.25.0
 urllib3==2.2.1
-Flask==2.2.5
+flask>=2.0.0
+pyyaml>=6.0
+flask-wtf>=1.0.0
+python-dotenv>=0.20.0

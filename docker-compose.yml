@@ -9,7 +9,27 @@ services:
     ports:
       - "2355:2355"
     volumes:
-      - .:/app
+      - gofile_data:/data
     environment:
       - PORT=2355
-      - BASE_DIR=/app
+      - HOST=0.0.0.0
+      - BASE_DIR=/data
+      - SECRET_KEY=change-this-to-a-random-secret-in-production
+      # Uncomment and set these variables to enable authentication
+      # - AUTH_ENABLED=true
+      # - AUTH_USERNAME=admin
+      # - AUTH_PASSWORD=secure_password_here
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2355/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  gofile_data:

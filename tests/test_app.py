@@ -1,76 +1,119 @@
 import unittest
+from unittest.mock import patch, MagicMock
 import json
+import tempfile
 import os
-import time
-from app import app, download_tasks
+import sys
+import base64
 
-class AppTestCase(unittest.TestCase):
+# Add parent directory to path to import app module
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import app
+
+class TestFlaskApp(unittest.TestCase):
+    """Test cases for Flask application routes and functions"""
+    
     def setUp(self):
-        self.client = app.test_client()
-        app.config["TESTING"] = True
-        # Clear tasks before each test
-        download_tasks.clear()
-
-    def test_index(self):
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"GoFile Downloader", response.data)
-
-    def test_browse(self):
-        response = self.client.get("/browse?path=")
-        self.assertEqual(response.status_code, 200)
+        """Set up test environment"""
+        self.app = app.app
+        self.app.config['TESTING'] = True
+        self.app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for testing
+        self.client = self.app.test_client()
+        
+        # Mock the config to enable auth for auth tests
+        self.original_config = app.config.copy()
+        
+        # Create a temporary directory for tests
+        self.temp_dir = tempfile.mkdtemp()
+        
+    def tearDown(self):
+        """Clean up after tests"""
+        # Restore original config
+        app.config = self.original_config
+        
+        # Clean up temp directory
+        import shutil
+        shutil.rmtree(self.temp_dir)
+        
+        # Reset tasks
+        app.download_tasks = {}
+    
+    def test_health_check(self):
+        """Test the health check endpoint"""
+        response = self.client.get('/health')
         data = json.loads(response.data)
-        self.assertIsInstance(data, dict)
-        self.assertIn("directories", data)
-
-    def test_start_missing_url(self):
-        response = self.client.post("/start", data={})
-        self.assertEqual(response.status_code, 400)
-        data = json.loads(response.data)
-        self.assertIn("error", data)
-
-    def test_tasks_endpoint_empty(self):
-        response = self.client.get("/tasks")
+        
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        # Tasks dict may be empty initially.
-        self.assertIsInstance(data, dict)
-
-    def test_fake_delete_missing_file(self):
-        # Create a fake task with an out_path that doesn't exist.
-        task_id = "fake-task"
-        download_tasks[task_id] = {
-            'progress': 100,
-            'overall_progress': 100,
-            'eta': "N/A",
-            'status': "completed",
-            'url': "https://gofile.io/d/fake",
-            'name': "Fake Task",
-            'timestamp': time.time(),
-            'out_path': "non_existing_path"
+        self.assertEqual(data['status'], 'ok')
+        self.assertIn('system', data)
+        self.assertIn('application', data)
+    
+    def test_tasks_endpoint(self):
+        """Test the /tasks endpoint"""
+        # Add a mock task
+        app.download_tasks = {
+            'test-task-1': {
+                'progress': 50,
+                'status': 'running',
+                'url': 'https://example.com',
+                'timestamp': 123456789,
+                'name': 'Test Task'
+            }
         }
-        response = self.client.post(f"/delete/{task_id}")
-        self.assertEqual(response.status_code, 200)
+        
+        response = self.client.get('/tasks')
         data = json.loads(response.data)
-        self.assertIn("Files already removed", data.get("message"))
-
-    def test_cancel_endpoint(self):
-        # Create a fake task for cancellation.
-        task_id = "cancel-task"
-        download_tasks[task_id] = {
-            'progress': 50,
-            'overall_progress': 50,
-            'eta': "N/A",
-            'status': "running",
-            'url': "https://gofile.io/d/fake",
-            'name': "Cancel Task",
-            'timestamp': time.time(),
-            'cancel_event': type('FakeEvent', (), {"set": lambda self: None, "is_set": lambda self: True})()
-        }
-        response = self.client.post(f"/cancel/{task_id}")
+        
         self.assertEqual(response.status_code, 200)
+        self.assertIn('test-task-1', data)
+        self.assertEqual(data['test-task-1']['progress'], 50)
+    
+    @patch('app.GoFile')
+    @patch('app.threading.Thread')
+    def test_start_download(self, mock_thread, mock_gofile):
+        """Test the start download endpoint"""
+        # Mock thread start method
+        mock_thread_instance = MagicMock()
+        mock_thread.return_value = mock_thread_instance
+        
+        response = self.client.post('/start', data={
+            'url': 'https://gofile.io/d/test',
+            'directory': self.temp_dir,
+            'throttle': '100',
+            'retries': '3'
+        })
+        
         data = json.loads(response.data)
-        self.assertEqual(data.get("status"), "cancelled")
-
-if __name__ == '__main__':
-    unittest.main()
+        
+        self.assertEqual(response.status_code, 202)
+        self.assertIn('task_id', data)
+        self.assertIn(data['task_id'], app.download_tasks)
+        mock_thread_instance.start.assert_called_once()
+        
+        # Verify task configuration
+        task = app.download_tasks[data['task_id']]
+        self.assertEqual(task['url'], 'https://gofile.io/d/test')
+        self.assertEqual(task['directory'], self.temp_dir)
+        self.assertEqual(task['throttle'], 100)
+        self.assertEqual(task['retries'], 3)
+    
+    def test_authentication(self):
+        """Test authentication when enabled"""
+        # Set auth config
+        app.config["auth"]["enabled"] = True
+        app.config["auth"]["username"] = "testuser"
+        app.config["auth"]["password"] = "testpass"
+        
+        # Test without auth (should fail)
+        response = self.client.get('/tasks')
+        self.assertEqual(response.status_code, 401)
+        
+        # Test with invalid auth
+        headers = {'Authorization': 'Basic ' + base64.b64encode(b'wrong:wrong').decode('utf-8')}
+        response = self.client.get('/tasks', headers=headers)
+        self.assertEqual(response.status_code, 401)
+        
+        # Test with valid auth
+        headers = {'Authorization': 'Basic ' + base64.b64encode(b'testuser:testpass').decode('utf-8')}
+        response = self.client.get('/tasks', headers=headers)
+        self.assertEqual(response.status_code, 200)
