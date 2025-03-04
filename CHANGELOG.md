@@ -5,6 +5,7 @@
 This marks the first independent release after breaking from the original fork.
 
 ### Major Changes
+
 - Complete rewrite of the download engine
 - Added web interface with responsive design
 - Real-time progress tracking and ETA calculation
@@ -14,4 +15,5 @@ This marks the first independent release after breaking from the original fork.
 - ... [other major changes]
 
 ### Acknowledgements
+
 - Original concept by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl)
