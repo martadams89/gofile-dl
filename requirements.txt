@@ -1,6 +1,6 @@
-certifi==2025.1.31
-charset-normalizer==3.3.2
-idna==3.10
+
+certifi==2024.2.2
+charset-normalizer==3.4.1
 pathvalidate==3.2.0
 requests==2.32.3
 urllib3==2.2.1
