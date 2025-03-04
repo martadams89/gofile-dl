@@ -1,51 +1,82 @@
-# Gofile-dl [![python](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org) 
+# gofile-dl
 
-<a href="https://buymeacoffee.com/r1y5i" target="_blank">
-<img style="border-radius: 20px" src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174">
-</a>
+Forked from [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl) by martadams89.  
+A CLI tool to download files from a gofile.io link – now with a modern, responsive web interface featuring light/dark mode, enhanced task tracking with overall progress/ETA, friendly naming, filtering, cancellation, deletion of downloaded files, and Docker support.
 
 ## About ##
-A CLI (Command Line Interface) tool to download all directories and files from a gofile.io link as a batch  
+gofile-dl is a tool to download directories and files from a gofile.io URL. This fork adds:
+- A Flask web interface that includes:
+  - A form to enter a GoFile URL, optional password, and select a download directory.
+  - A dynamic file system browser.
+  - Task tracking with progress bars for individual files and overall folder progress with an estimated time of arrival (ETA).
+  - Friendly task naming (updated as files are downloaded).
+  - Controls to pause (stub), cancel, delete (remove files from disk), and manually remove tasks from the panel.
+  - A filter to show tasks older than 1, 7, 30, 180, or 365 days.
+  - A dark/light mode toggle.
+- Docker and Docker Compose support for easy deployment.
 
 ## Setup ##
-1. Download repository  
+1. Clone the repository:  
 ```console
-git clone https://github.com/rkwyu/gofile-dl
+git clone https://github.com/martadams89/gofile-dl
 ```
-2. Install dependencies
+2. Install dependencies:  
 ```console
 cd ./gofile-dl
 python -m pip install -r requirements.txt
 ```
 
-## Usage (CLI) ##
+## CLI Usage ##
 ```console
 usage: run.py [-h] [-d DIR] [-p PASSWORD] url
-
-positional arguments:
-  url
-
-options:
-  -h, --help   show this help message and exit
-  -d DIR       output directory
-  -p PASSWORD  password
 ```
-Default output directory is `./output` 
+Default output directory is `./output`.
 
-#### Example 1: Download files from https://gofile.io/d/foobar ####
+#### Example (CLI):
 ```console
 python run.py https://gofile.io/d/foobar
 ```
 
-#### Example 2: Download files from https://gofile.io/d/foobar to directory /baz/qux ####
+## Web Interface ##
+The Flask web interface includes:
+- A form to input a GoFile URL, optional password, and a browsable download directory.
+- A task panel that displays:
+  - Real-time progress bars (individual file progress and overall folder progress with ETA).
+  - Friendly names (automatically updated from the downloaded folder name if available).
+  - Timestamps for when tasks started.
+  - Controls to pause (stub), cancel, delete the downloaded files from disk (with confirmation), and manually remove tasks.
+  - A dropdown filter to show tasks older than a specified number of days.
+- A dark/light mode toggle.
+
+### To run the web interface:
 ```console
-python run.py -d /baz/qux https://gofile.io/d/foobar
+python app.py
+```
+Access the app at [http://localhost:2355](http://localhost:2355) or on the port set via the `PORT` environment variable.
+
+## Docker ##
+A Dockerfile and docker-compose.yml are included.
+
+### Build and Run with Docker:
+```console
+docker build -t gofile-dl .
+docker run -p 2355:2355 gofile-dl
 ```
 
-#### Example 3: Download files from https://gofile.io/d/foobar with password "1234" protected ####
+### Using Docker Compose:
 ```console
-python run.py -p 1234 https://gofile.io/d/foobar
+docker-compose up --build
 ```
+This Compose file uses the image `martadams89/gofile-dl:latest`.
+
+## Environment Variables ##
+- `PORT`: Set the port the web interface runs on (default 2355).
+- `BASE_DIR`: Set the base directory for file browsing (default is `/app` when using the web interface).
+
+## New Features ##
+- **Overall Progress & ETA:** For folder downloads, overall progress is computed and an ETA is displayed.
+- **File Deletion:** A delete button is available for each task to remove the downloaded files from disk (with a confirmation prompt).
+- **Task Management:** Cancel and manual removal (delete from task list) functionalities have been added.
 
 ## License ##
 This project is licensed under the [MIT License](LICENSE.md)
