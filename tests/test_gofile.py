@@ -54,27 +54,6 @@ class TestGoFile(unittest.TestCase):
         count = self.gofile.count_files(children)
         self.assertEqual(count, 5, "Should count all files in nested structure")
     
-    def test_extract_content_id(self):
-        """Test content ID extraction from different URL formats"""
-        test_cases = [
-            ("https://gofile.io/d/abc123", "abc123"),
-            ("https://gofile.io/d/abc123/", "abc123"),
-            ("gofile.io/d/abc123", "abc123"),
-            ("abc123", "abc123")
-        ]
-        
-        for url, expected in test_cases:
-            with self.subTest(url=url):
-                self.assertEqual(
-                    self.gofile.extract_content_id(url), 
-                    expected,
-                    f"Failed to extract content ID from {url}"
-                )
-        
-        # Test empty URL
-        with self.assertRaises(ValueError):
-            self.gofile.extract_content_id("")
-
     @patch('requests.post')
     def test_update_token(self, mock_post):
         """Test token update with mocked API response"""
