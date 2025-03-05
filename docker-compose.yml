@@ -3,7 +3,7 @@ version: "3.8"
 services:
   gofile-dl:
     # Use pre-built image by default
-    # image: martadams89/gofile-dl:latest
+    # image: ghcr.io/martadams89/gofile-dl:latest
     # To build from source instead of using pre-built image, uncomment these lines:
     build:
       context: .

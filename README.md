@@ -75,7 +75,7 @@ version: "3.8"
 
 services:
   gofile-dl:
-    image: martadams89/gofile-dl:latest
+    image: ghcr.io/martadams89/gofile-dl:latest
     container_name: gofile-dl
     ports:
       - "2355:2355"
@@ -150,7 +150,7 @@ version: "3.8"
 
 services:
   gofile-dl:
-    image: martadams89/gofile-dl:latest
+    image: ghcr.io/martadams89/gofile-dl:latest
     volumes:
       - ./downloads:/data
     environment:
@@ -178,7 +178,7 @@ version: "3.8"
 
 services:
   gofile-dl:
-    image: martadams89/gofile-dl:latest
+    image: ghcr.io/martadams89/gofile-dl:latest
     volumes:
       - ./downloads:/data
     environment:
