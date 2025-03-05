@@ -19,9 +19,9 @@ DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore DL3008 --ignore DL3013 --ignore DL3018 
 
 # Ruff configuration
 PYTHON_RUFF_ARGUMENTS: "--config=.ruff.toml"
-PYTHON_RUFF_FILTER_REGEX_EXCLUDE: '(test_.*\.py)'  # Use single quotes to avoid escape issues
-PYTHON_RUFF_DISABLE_ERRORS: true  # Don't fail build on ruff errors
-PYTHON_RUFF_DISABLE_ERRORS_IF_LESS_THAN: 10  # Only fail if more than 10 errors
+PYTHON_RUFF_FILTER_REGEX_EXCLUDE: '(test_.*\.py)' # Use single quotes to avoid escape issues
+PYTHON_RUFF_DISABLE_ERRORS: true # Don't fail build on ruff errors
+PYTHON_RUFF_DISABLE_ERRORS_IF_LESS_THAN: 10 # Only fail if more than 10 errors
 
 # Complete pyright suppression - skip all error reporting
 PYTHON_PYRIGHT_ARGUMENTS: "--skipunannotated --skipLibCheck true --reportMissingImports false --reportCallIssue none --reportAttributeAccessIssue none --reportArgumentType false"
