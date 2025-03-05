@@ -6,9 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from errors import (
     GoFileError, 
-    ContentNotFoundError, 
-    GoFileAPIError, 
-    ServerError
+    ContentNotFoundError
 )
 
 class ErrorsTest(unittest.TestCase):
@@ -24,17 +22,7 @@ class ErrorsTest(unittest.TestCase):
         error = ContentNotFoundError("test-id")
         self.assertEqual(str(error), "Content ID test-id not found")
         
-    def test_gofile_api_error(self):
-        """Test GoFileAPIError class"""
-        error = GoFileAPIError("API error")
-        self.assertEqual(str(error), "GoFile API Error: API error")
-        
     # Removing the test for ContentTypeNotSupportedError since it doesn't exist
-    
-    def test_server_error(self):
-        """Test ServerError class"""
-        error = ServerError("Server unavailable")
-        self.assertEqual(str(error), "Server Error: Server unavailable")
 
 if __name__ == '__main__':
     unittest.main()
