@@ -8,6 +8,7 @@ import time
 import yaml
 import shutil
 from flask import url_for
+from threading import Event  # Add this import at the top of the file
 
 # Add parent directory to path to import app module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -46,7 +47,7 @@ class TestFlaskAppComplete(unittest.TestCase):
         
         # Mock yaml.safe_load to return our test config
         with patch('yaml.safe_load', return_value=test_config):
-            with patch('builtins.open', mock_open()) as mock_file:
+            with patch('builtins.open', mock_open()):
                 # Reload the app module to trigger config loading
                 reload_module = __import__('importlib').reload
                 reload_module(app)

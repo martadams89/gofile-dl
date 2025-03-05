@@ -250,7 +250,6 @@ class TestGoFileExtended(unittest.TestCase):
         progress_callback = MagicMock()
         file_progress_callback = MagicMock()
         name_callback = MagicMock()
-        cancel_callback = MagicMock(return_value=False)
         pause_callback = MagicMock(return_value=False)
         overall_progress_callback = MagicMock()
         
