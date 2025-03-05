@@ -79,6 +79,7 @@ class TestFlaskApp(unittest.TestCase):
         with patch('yaml.safe_load', return_value=test_config):
             with patch('builtins.open'):
                 # Load config directly without reloading module
+                # Load config directly without reloading module
                 app.config = app.DEFAULT_CONFIG.copy()
                 
                 # Mock the config file opening and loading
@@ -346,5 +347,4 @@ class TestFlaskApp(unittest.TestCase):
                 'directory': self.temp_dir,
                 'password': 'testpass'
             }, follow_redirects=False)
-            self.assertEqual(response.status_code, 302)
-            self.assertIn('/start', response.location)
+            self.assertEqual(response.status_code, 302)            self.assertIn('/start', response.location)

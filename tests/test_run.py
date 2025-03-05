@@ -215,9 +215,6 @@ class TestGoFile(unittest.TestCase):
         # Create a cancel event and set it after first chunk
         cancel_event = Event()
         
-        # Need to set cancel event after first chunk
-        original_write = open(test_file, "wb").write
-        
         def mock_write(data):
             # After first chunk, set cancel event
             if not cancel_event.is_set():
