@@ -1,5 +1,5 @@
 # Core dependencies
-Flask>=3.0.0
+Flask>=3.1.0
 requests==2.32.3
 pathvalidate==3.2.3
 
@@ -17,7 +17,7 @@ psutil>=5.9.8
 certifi==2025.1.31
 charset-normalizer==3.4.1
 idna==3.10
-urllib3==2.2.1
+urllib3==2.3.0
 
 # For testing (uncomment when needed)
 # pytest>=7.4.0
