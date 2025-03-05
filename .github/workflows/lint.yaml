@@ -4,19 +4,16 @@
 name: Lint and Test
 
 on:
-  push:
-    branches: [main, master, dev]
-    paths-ignore:
-      - "**.md"
-      - "LICENSE"
-      - ".gitignore"
-  pull_request:
-    branches: [main, master]
-    paths-ignore:
-      - "**.md"
-      - "LICENSE"
-      - ".gitignore"
   workflow_dispatch:
+  workflow_call:
+  push:
+    branches:
+      - "*"
+    paths:
+      - README.md
+      - CHANGELOG.md
+      - version.txt
+      - ".github/workflows/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
