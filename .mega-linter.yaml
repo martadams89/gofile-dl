@@ -17,7 +17,7 @@ PYTHON_ISORT_ARGUMENTS: "--profile black"
 PYTHON_PYLINT_ARGUMENTS: "--disable=C0103,C0111,R0903,W0212,import-error --max-line-length=100"
 DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore DL3008 --ignore DL3013 --ignore DL3018 --ignore DL3003"
 
-# Fixed mypy arguments 
+# Fixed mypy arguments
 PYTHON_MYPY_ARGUMENTS: "--ignore-missing-imports --no-strict-optional"
 
 # Fixed pyright arguments
@@ -49,5 +49,5 @@ PYTHON_BANDIT_CONFIG_FILE: .bandit.yml
 
 # Disable certain linters or error types
 DISABLE_LINTERS:
-  - COPYPASTE  # Disable copy-paste detection
-  - SPELL      # Disable spell checking
+  - COPYPASTE # Disable copy-paste detection
+  - SPELL # Disable spell checking
