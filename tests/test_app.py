@@ -6,6 +6,7 @@ import sys
 import json
 import time
 import base64
+import yaml  # Add this missing import
 from threading import Event
 
 # Add parent directory to path to import app module
@@ -79,7 +80,6 @@ class TestFlaskApp(unittest.TestCase):
         with patch('yaml.safe_load', return_value=test_config):
             with patch('builtins.open'):
                 # Load config directly without reloading module
-                # Load config directly without reloading module
                 app.config = app.DEFAULT_CONFIG.copy()
                 
                 # Mock the config file opening and loading
@@ -148,7 +148,7 @@ class TestFlaskApp(unittest.TestCase):
         
         # Test with valid auth
         auth_header = {
-            'Authorization': 'Basic ' + 
+            'Authorization': 'Basic ' +
             base64.b64encode(b'testuser:testpass').decode('utf-8')
         }
         response = self.client.get('/browse', headers=auth_header)
@@ -156,7 +156,7 @@ class TestFlaskApp(unittest.TestCase):
         
         # Test with invalid auth
         auth_header = {
-            'Authorization': 'Basic ' + 
+            'Authorization': 'Basic ' +
             base64.b64encode(b'wrong:wrong').decode('utf-8')
         }
         response = self.client.get('/browse', headers=auth_header)
@@ -347,4 +347,5 @@ class TestFlaskApp(unittest.TestCase):
                 'directory': self.temp_dir,
                 'password': 'testpass'
             }, follow_redirects=False)
-            self.assertEqual(response.status_code, 302)            self.assertIn('/start', response.location)
+            self.assertEqual(response.status_code, 302)
+            self.assertIn('/start', response.location)

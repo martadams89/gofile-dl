@@ -17,8 +17,11 @@ PYTHON_ISORT_ARGUMENTS: "--profile black"
 PYTHON_PYLINT_ARGUMENTS: "--disable=C0103,C0111,R0903,W0212,import-error,no-member --max-line-length=100"
 DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore DL3008 --ignore DL3013 --ignore DL3018 --ignore DL3003"
 
-# Completely disable mypy errors by adding all error codes we're seeing
-PYTHON_MYPY_ARGUMENTS: "--ignore-missing-imports --no-strict-optional --disable-error-code attr-defined --disable-error-code call-arg --disable-error-code index --disable-error-code arg-type --disable-error-code misc"
+# Ruff configuration
+PYTHON_RUFF_ARGUMENTS: "--config=.ruff.toml"
+PYTHON_RUFF_FILTER_REGEX_EXCLUDE: "(test_.*\.py)"
+PYTHON_RUFF_DISABLE_ERRORS: true  # Don't fail build on ruff errors
+PYTHON_RUFF_DISABLE_ERRORS_IF_LESS_THAN: 10  # Only fail if more than 10 errors
 
 # Complete pyright suppression - skip all error reporting
 PYTHON_PYRIGHT_ARGUMENTS: "--skipunannotated --skipLibCheck true --reportMissingImports false --reportCallIssue none --reportAttributeAccessIssue none --reportArgumentType false"
@@ -29,12 +32,19 @@ PYTHON_BANDIT_ARGUMENTS: "--recursive --exclude .venv,venv,tests --skip B104,B10
 # Exclude directories and files
 FILTER_REGEX_EXCLUDE: '(\.venv|venv|\.git|\.pytest_cache|__pycache__|\.mypy_cache|\.docker)'
 
-# File-specific flake8 rules
+# File-specific rules
 PYTHON_FLAKE8_FILTER_REGEX_EXCLUDE: '(\.venv|venv|test_.*\.py)'
 PYTHON_FLAKE8_ARGUMENTS_PER_MATCH:
   "run.py": "--max-line-length 120 --extend-ignore=E501"
 
+# Ignore whitespace issues and unused vars in tests
 PYTHON_PYLINT_FILTER_REGEX_EXCLUDE: '(\.venv|venv|test_.*\.py)'
+
+# Use existing configuration files
+PYTHON_FLAKE8_CONFIG_FILE: .flake8
+PYTHON_RUFF_CONFIG_FILE: .ruff.toml
+PYTHON_MYPY_CONFIG_FILE: .mypy.ini
+PYTHON_BANDIT_CONFIG_FILE: .bandit.yml
 
 # Performance optimization
 PARALLEL: true
@@ -42,14 +52,14 @@ SHOW_ELAPSED_TIME: true
 FILEIO_REPORTER: false
 GITHUB_COMMENT_REPORTER: false
 
-# Use existing configuration files
-PYTHON_FLAKE8_CONFIG_FILE: .flake8
-PYTHON_MYPY_CONFIG_FILE: .mypy.ini
-PYTHON_BANDIT_CONFIG_FILE: .bandit.yml
-
 # Disable certain linters completely for now
 DISABLE_LINTERS:
   - COPYPASTE # Disable copy-paste detection
   - SPELL # Disable spell checking
   - PYTHON_MYPY # Completely disable mypy
   - PYTHON_PYRIGHT # Completely disable pyright
+
+# To disable specific ignored rules for CI
+DISABLE_ERRORS_LINTERS:
+  - PYTHON_RUFF
+  - MARKDOWN

@@ -46,7 +46,10 @@ def get_env_var(var_name: str, default: Any = None, required: bool = False,
         try:
             return type_func(value)
         except Exception as e:
-            raise ValueError(f"Failed to convert {var_name}={value} using {type_func.__name__}: {str(e)}")
+            # Use 'raise from e' to properly chain exceptions
+            raise ValueError(
+                f"Failed to convert {var_name}={value} using {type_func.__name__}: {str(e)}"
+            ) from e
     
     return value
 
