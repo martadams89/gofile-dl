@@ -1,12 +1,4 @@
-FROM python:3.11-slim
-
-# Create a non-root user
-RUN groupadd -r gofile && useradd -r -g gofile gofile
-
-# Create necessary directories with proper permissions
-RUN mkdir -p /app /data && chown -R gofile:gofile /app /data
-
-# Set working directory
+FROM python:3.13-slim
 WORKDIR /app
 
 # Install system dependencies

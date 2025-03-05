@@ -1,24 +1,6 @@
-# Core dependencies
-Flask>=3.0.0
-requests>=2.31.0
-pathvalidate>=3.2.0
-
-# Flask extensions
-Flask-WTF>=1.2.1
-
-# Configuration and environment
-python-dotenv>=1.0.0
-PyYAML>=6.0.1
-
-# System monitoring
-psutil>=5.9.8
-
-# Security
-certifi>=2024.2.0
-charset-normalizer>=3.3.2
-idna>=3.7
-urllib3>=2.2.0
-
-# For testing (uncomment when needed)
-# pytest>=7.4.0
-# pytest-cov>=4.1.0
+certifi==2025.1.31
+charset-normalizer==3.4.1
+idna==3.10
+pathvalidate==3.2.3
+requests==2.32.3
+urllib3==2.2.1

@@ -1,19 +1,7 @@
 # Changelog
 
-## v1.1.0
+## 1.0.0 (2025-03-04)
 
-This marks the first independent release after breaking from the original fork.
+### Features
 
-### Major Changes
-
-- Complete rewrite of the download engine
-- Added web interface with responsive design
-- Real-time progress tracking and ETA calculation
-- Docker and Docker Compose support
-- Authentication and CSRF protection
-- Download throttling and retry capabilities
-- ... [other major changes]
-
-### Acknowledgements
-
-- Original concept by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl)
+- :rocket: add initial project structure with Docker support and CI workflows ([3f72fea](https://github.com/martadams89/gofile-dl/commit/3f72fea3aa7c7f4f6af1ec28abc272bf1cc3291d))
