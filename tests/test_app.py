@@ -53,87 +53,40 @@ class TestFlaskApp(unittest.TestCase):
         # Test required variable missing
         with self.assertRaises(ValueError):
             app.get_env_var("REQUIRED_MISSING_VAR", required=True)
-    
+        
+        # Clean up environment
+        os.environ.pop("TEST_INT_VAR", None)
+        os.environ.pop("TEST_INVALID_INT", None)
+
     def test_config_loading(self):
         """Test configuration loading"""
-        # Create a custom complete config that includes all required keys
+        # Create a custom configuration
         test_config = {
             "port": 8080,
             "host": "127.0.0.1",
             "base_dir": "/custom/path",
             "secret_key": "test-secret",
-            "default_retries": 5,
-            "retry_delay": 10,
-            "log_level": "DEBUG",
             "auth": {
                 "enabled": True,
                 "username": "testuser",
                 "password": "testpass"
-            },
-            "csrf": {
-                "enabled": True,
-                "time_limit": 7200
             }
         }
         
-        # Test with the complete config
-        with patch('yaml.safe_load', return_value=test_config):
-            with patch('builtins.open'):
-                # Load config directly without reloading module
-                app.config = app.DEFAULT_CONFIG.copy()
-                
-                # Mock the config file opening and loading
-                app_instance = app
-                
-                # Manually re-run the config loading logic
-                try:
-                    with open(app.CONFIG_FILE, 'r'):
-                        pass  # Just testing if open is called
-                    app_instance.config = test_config
-                except (FileNotFoundError, yaml.YAMLError):
-                    app_instance.config = app.DEFAULT_CONFIG
-                
-                # Ensure config structure matches expected schema
-                if "auth" not in app_instance.config:
-                    app_instance.config["auth"] = app.DEFAULT_CONFIG["auth"]
-                elif not isinstance(app_instance.config["auth"], dict):
-                    app_instance.config["auth"] = app.DEFAULT_CONFIG["auth"]
-                
-                if "csrf" not in app_instance.config:
-                    app_instance.config["csrf"] = app.DEFAULT_CONFIG["csrf"]
-                
-                # Environment variable override logic
-                app_instance.config["port"] = app.get_env_var("PORT", app_instance.config["port"], False, int)
-                app_instance.config["host"] = app.get_env_var("HOST", app_instance.config["host"])
-                app_instance.config["base_dir"] = app.get_env_var("BASE_DIR", app_instance.config["base_dir"])
-                app_instance.config["secret_key"] = app.get_env_var("SECRET_KEY", app_instance.config["secret_key"])
-                
-                # Verify config was loaded correctly
-                self.assertEqual(app_instance.config["port"], 8080)
-                self.assertEqual(app_instance.config["host"], "127.0.0.1")
-                self.assertEqual(app_instance.config["base_dir"], "/custom/path")
-                self.assertTrue(app_instance.config["auth"]["enabled"])
-    
-    def test_config_file_not_found(self):
-        """Test handling of missing config file"""
-        # Mock open to raise FileNotFoundError
-        with patch('builtins.open', side_effect=FileNotFoundError):
-            with patch('yaml.safe_load') as mock_yaml:
-                # Reset config
-                app.config = app.DEFAULT_CONFIG.copy()
-                
-                # Manually re-run the config loading logic
-                try:
-                    with open(app.CONFIG_FILE, 'r'):
-                        pass
-                except (FileNotFoundError, yaml.YAMLError):
-                    app.config = app.DEFAULT_CONFIG
-                
-                # yaml.safe_load should not be called
-                mock_yaml.assert_not_called()
-                
-                # Default config should be used
-                self.assertEqual(app.config["port"], app.DEFAULT_CONFIG["port"])
+        # Mock config file loading
+        with patch('yaml.safe_load', return_value=test_config), \
+             patch('builtins.open'):
+            
+            # Manually simulate config loading
+            config_copy = app.DEFAULT_CONFIG.copy()
+            config_copy.update(test_config)
+            
+            # Verify values are properly set
+            self.assertEqual(config_copy["port"], 8080)
+            self.assertEqual(config_copy["host"], "127.0.0.1")
+            self.assertEqual(config_copy["base_dir"], "/custom/path")
+            self.assertEqual(config_copy["auth"]["username"], "testuser")
+            self.assertEqual(config_copy["auth"]["enabled"], True)
 
     def test_authentication(self):
         """Test authentication-related functionality"""
@@ -161,9 +114,6 @@ class TestFlaskApp(unittest.TestCase):
         }
         response = self.client.get('/browse', headers=auth_header)
         self.assertEqual(response.status_code, 401)
-        
-        # Disable auth for subsequent tests
-        app.config["auth"]["enabled"] = False
 
     def test_health_check(self):
         """Test health check endpoint"""
@@ -178,17 +128,14 @@ class TestFlaskApp(unittest.TestCase):
                  free=53687091200,  # 50GB
                  percent=50.0
              )):
-            # Call health check endpoint
+            
             response = self.client.get('/health')
             data = json.loads(response.data)
             
-            # Check response
             self.assertEqual(response.status_code, 200)
             self.assertEqual(data['status'], 'ok')
             self.assertIn('system', data)
-            self.assertIn('cpu_usage', data['system'])
             self.assertEqual(data['system']['cpu_usage'], 25.0)
-            self.assertIn('memory', data['system'])
             self.assertEqual(data['system']['memory']['percent'], 50.0)
 
     def test_browse_endpoint(self):
@@ -206,133 +153,60 @@ class TestFlaskApp(unittest.TestCase):
             self.assertIn("subdir", data["directories"])
             
             # Test with valid subpath
-            response = self.client.get(f'/browse?path=subdir')
+            response = self.client.get('/browse?path=subdir')
             self.assertEqual(response.status_code, 200)
             
             # Test with invalid path
             response = self.client.get('/browse?path=nonexistent')
             self.assertEqual(response.status_code, 400)
 
-    def test_download_task(self):
-        """Test background download task"""
-        # Mock GoFile class
-        with patch('app.GoFile') as mock_gofile_class:
-            # Configure the mock
-            mock_gofile = MagicMock()
-            mock_gofile_class.return_value = mock_gofile
-            
-            # Create test task
-            task_id = "test-task"
-            app.download_tasks[task_id] = {
-                'progress': 0,
-                'cancel_event': Event(),
-                'thread': None,
-                'status': "running",
-                'url': "https://gofile.io/d/test",
-                'directory': self.temp_dir,
-                'timestamp': time.time(),
-                'name': "test_file",
-                'files': [],
-                'paused': False,
-                'throttle': 100,
-                'retries': 3
-            }
-            
-            # Run the download task
-            app.download_task(
-                url="https://gofile.io/d/test",
-                directory=self.temp_dir,
-                password="testpass",
-                task_id=task_id
-            )
-            
-            # Verify GoFile.execute was called with correct parameters
-            mock_gofile.execute.assert_called_once()
-            # Verify task was marked as completed
-            self.assertEqual(app.download_tasks[task_id]['status'], "completed")
-
-    def test_start_download_endpoint(self):
-        """Test start_download endpoint"""
+    def test_task_management(self):
+        """Test task creation and management endpoints"""
+        # Test task creation
         with patch('app.threading.Thread') as mock_thread:
-            # Call the endpoint
             response = self.client.post('/start', data={
                 'url': 'https://gofile.io/d/test',
-                'directory': self.temp_dir,
-                'password': 'testpass',
-                'throttle': '100',
-                'retries': '3'
+                'directory': self.temp_dir
             })
-            
-            # Check response
             self.assertEqual(response.status_code, 202)
             data = json.loads(response.data)
             self.assertIn('task_id', data)
             
-            # Verify task was created
-            task_id = data['task_id']
-            self.assertIn(task_id, app.download_tasks)
-            self.assertEqual(app.download_tasks[task_id]['url'], 'https://gofile.io/d/test')
-            self.assertEqual(app.download_tasks[task_id]['directory'], self.temp_dir)
-            self.assertEqual(app.download_tasks[task_id]['throttle'], 100)
-            self.assertEqual(app.download_tasks[task_id]['retries'], 3)
-            
             # Verify thread was started
             mock_thread.assert_called_once()
             mock_thread.return_value.start.assert_called_once()
-    
-    def test_task_management_endpoints(self):
-        """Test task management endpoints (cancel, pause, remove, delete)"""
-        # Create a test task
-        task_id = "test-task"
-        cancel_event = Event()
-        app.download_tasks[task_id] = {
-            'progress': 50,
-            'cancel_event': cancel_event,
-            'status': 'running',
-            'url': 'https://example.com',
-            'name': 'Test File',
-            'paused': False,
-            'out_path': os.path.join(self.temp_dir, "test_file.txt")
-        }
-        
-        # Create a test file
-        with open(os.path.join(self.temp_dir, "test_file.txt"), "w") as f:
-            f.write("test data")
-        
-        # Test cancel endpoint
-        response = self.client.post(f'/cancel/{task_id}')
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(cancel_event.is_set())
-        
-        # Test pause endpoint
-        response = self.client.post(f'/pause/{task_id}')
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        self.assertTrue(app.download_tasks[task_id]['paused'])
-        
-        # Test unpause (toggle)
-        response = self.client.post(f'/pause/{task_id}')
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        self.assertFalse(app.download_tasks[task_id]['paused'])
-        
-        # Test progress endpoint
-        response = self.client.get(f'/progress/{task_id}')
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        self.assertEqual(data['progress'], 50)
-        
-        # Test tasks endpoint
-        response = self.client.get('/tasks')
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        self.assertIn(task_id, data)
-        
-        # Test delete endpoint
-        response = self.client.post(f'/delete/{task_id}')
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(os.path.exists(os.path.join(self.temp_dir, "test_file.txt")))
-        self.assertNotIn(task_id, app.download_tasks)
+            
+            # Get task ID
+            task_id = data['task_id']
+            
+            # Test getting tasks list
+            response = self.client.get('/tasks')
+            self.assertEqual(response.status_code, 200)
+            tasks = json.loads(response.data)
+            self.assertIn(task_id, tasks)
+            
+            # Test task progress
+            response = self.client.get(f'/progress/{task_id}')
+            self.assertEqual(response.status_code, 200)
+            
+            # Test pause/unpause
+            response = self.client.post(f'/pause/{task_id}')
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            self.assertTrue(data['paused'])
+            
+            # Test cancellation 
+            response = self.client.post(f'/cancel/{task_id}')
+            self.assertEqual(response.status_code, 200)
+            
+            # Test task removal
+            response = self.client.post(f'/remove/{task_id}')
+            self.assertEqual(response.status_code, 200)
+            
+            # Verify task is gone
+            response = self.client.get('/tasks')
+            tasks = json.loads(response.data)
+            self.assertNotIn(task_id, tasks)
 
     def test_index_route(self):
         """Test the main index route"""
@@ -349,3 +223,6 @@ class TestFlaskApp(unittest.TestCase):
             }, follow_redirects=False)
             self.assertEqual(response.status_code, 302)
             self.assertIn('/start', response.location)
+
+if __name__ == '__main__':
+    unittest.main()

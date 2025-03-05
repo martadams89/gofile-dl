@@ -16,18 +16,25 @@ class TestGoFile(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment"""
-        self.gofile = GoFile()
-        self.temp_dir = tempfile.mkdtemp()
-        # Reset singletons
-        self.gofile = GoFile()
-        self.temp_dir = tempfile.mkdtemp()
-        # Reset singletons
+        # Reset singleton instances before each test
         GoFile._instances = {}
+        self.gofile = GoFile()
+        self.temp_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         """Clean up after tests"""
         import shutil
         shutil.rmtree(self.temp_dir)
+
+    def test_singleton_pattern(self):
+        """Test singleton pattern implementation"""
+        instance1 = GoFile()
+        instance2 = GoFile()
+        self.assertIs(instance1, instance2, "GoFile should be a singleton")
+        
+        # Different parameters should create different instances
+        instance3 = GoFile(base_url="https://different-url.com")
+        self.assertIsNot(instance1, instance3, "Different parameters should create new instances")
 
     def test_count_files(self):
         """Test counting files in a nested structure"""
@@ -45,7 +52,28 @@ class TestGoFile(unittest.TestCase):
             }
         }
         count = self.gofile.count_files(children)
-        self.assertEqual(count, 5)
+        self.assertEqual(count, 5, "Should count all files in nested structure")
+    
+    def test_extract_content_id(self):
+        """Test content ID extraction from different URL formats"""
+        test_cases = [
+            ("https://gofile.io/d/abc123", "abc123"),
+            ("https://gofile.io/d/abc123/", "abc123"),
+            ("gofile.io/d/abc123", "abc123"),
+            ("abc123", "abc123")
+        ]
+        
+        for url, expected in test_cases:
+            with self.subTest(url=url):
+                self.assertEqual(
+                    self.gofile.extract_content_id(url), 
+                    expected,
+                    f"Failed to extract content ID from {url}"
+                )
+        
+        # Test empty URL
+        with self.assertRaises(ValueError):
+            self.gofile.extract_content_id("")
 
     @patch('requests.post')
     def test_update_token(self, mock_post):
@@ -58,8 +86,7 @@ class TestGoFile(unittest.TestCase):
         mock_post.return_value = mock_response
 
         self.gofile.update_token()
-        self.assertEqual(self.gofile.token, "test_token")
-        # Update the assertion to include the timeout parameter
+        self.assertEqual(self.gofile.token, "test_token", "Token should be updated from API response")
         mock_post.assert_called_once_with("https://api.gofile.io/accounts", timeout=10)
 
     @patch('requests.get')
@@ -70,8 +97,7 @@ class TestGoFile(unittest.TestCase):
         mock_get.return_value = mock_response
 
         self.gofile.update_wt()
-        self.assertEqual(self.gofile.wt, "test_wt")
-        # Update the assertion to include the timeout parameter
+        self.assertEqual(self.gofile.wt, "test_wt", "wt parameter should be extracted from JS response")
         mock_get.assert_called_once_with("https://gofile.io/dist/js/global.js", timeout=10)
 
     @patch('run.GoFile.update_token')
