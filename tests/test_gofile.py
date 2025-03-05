@@ -111,9 +111,9 @@ class TestGoFile(unittest.TestCase):
             self.assertEqual(call_args[0], "https://example.com/download/test_file.txt")
             self.assertEqual(call_args[1], expected_path)
 
-    @pytest.mark.skip(reason="Inconsistent mocking behavior in CI environment")
+    @unittest.skip("Inconsistent mocking behavior in CI environment")
+    @patch("requests.get")
     @patch("time.sleep", return_value=None)  # Don't actually sleep in tests
-    def test_download_with_retry(self, mock_sleep, mock_get):
     def test_download_with_retry(self, mock_sleep, mock_get):
         """Test download with retry functionality"""
         test_file = os.path.join(self.temp_dir, "test_retry.txt")
@@ -175,9 +175,6 @@ class TestGoFile(unittest.TestCase):
             
             # Verify that sleep was called for throttling
             mock_sleep.assert_called()
-if __name__ == '__main__':
-            
-if __name__ == '__main__':
-    unittest.main()
 
+if __name__ == '__main__':
     unittest.main()
