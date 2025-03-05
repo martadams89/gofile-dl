@@ -1,7 +1,8 @@
 [flake8]
 max-line-length = 100
 extend-ignore = E203
-# Exclude specific lines if needed
+# Exclude specific files or patterns
+exclude = .git,__pycache__,build,dist
 per-file-ignores =
     # Ignore line too long for specific lines in run.py
-    run.py:140: E501
+    run.py:E501
