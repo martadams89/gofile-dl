@@ -66,7 +66,7 @@ docker run -d --name gofile-dl \
   -p 2355:2355 \
   -v /your/download/path:/data \
   gofile-dl:latest
-````
+```
 
 ### Docker Compose Deployment
 
@@ -257,28 +257,36 @@ Example health check response:
 # GoFile Downloader
 
 ## Overview
+
 This application downloads files from GoFile.io, provides a web interface for managing downloads, and can browse the entire filesystem if configured.
 
 ## Running with Docker Compose
+
 By default, Docker Compose will:
+
 - Map HTTP port 2355 to the host.
 - Mount a local "downloads" folder to "/downloads" inside the container.
 
 To start:
+
 ```bash
 docker-compose up -d
 ```
 
 The environment variable BASE_DIR defaults to "/downloads". If you need to browse your entire server filesystem, set:
+
 ```bash
 BASE_DIR=/
 ```
+
 inside docker-compose.yml or your .env file.
 
 Downloads will be saved to the "downloads" directory on your host.
 
 ## Configuration
+
 Environment variables:
+
 - PORT (default: 2355)
 - HOST (default: 0.0.0.0)
 - BASE_DIR (default: /downloads)
@@ -288,6 +296,7 @@ Environment variables:
 For more options, see app.py and docker-compose.yml.
 
 ## Security Note
+
 Browsing the entire filesystem can be a security risk. Use authentication and restricted environment variables when needed in production.
 
 ## License
@@ -323,17 +332,20 @@ flake8 .
 black .
 ```
 
-## Support  
-Having issues with gofile-dl? Here are some resources:  
+## Support
 
-- **GitHub Issues**: Use our [issue tracker](https://github.com/martadams89/gofile-dl/issues) for bug reports and feature requests.  
-- **Discussions**: For general questions and community support, use our [GitHub Discussions](https://github.com/martadams89/gofile-dl/discussions).  
+Having issues with gofile-dl? Here are some resources:
 
-## Versioning  
-We use [SemVer](https://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/martadams89/gofile-dl/tags).  
+- **GitHub Issues**: Use our [issue tracker](https://github.com/martadams89/gofile-dl/issues) for bug reports and feature requests.
+- **Discussions**: For general questions and community support, use our [GitHub Discussions](https://github.com/martadams89/gofile-dl/discussions).
 
-## Acknowledgements  
-- Original concept by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl).  
-- Built with [Flask](https://flask.palletsprojects.com/) and [Bootstrap](https://getbootstrap.com/).  
-- Icons from [Bootstrap Icons](https://icons.getbootstrap.com/).  
-- Thanks to all contributors who have helped this project evolve!  
+## Versioning
+
+We use [SemVer](https://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/martadams89/gofile-dl/tags).
+
+## Acknowledgements
+
+- Original concept by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl).
+- Built with [Flask](https://flask.palletsprojects.com/) and [Bootstrap](https://getbootstrap.com/).
+- Icons from [Bootstrap Icons](https://icons.getbootstrap.com/).
+- Thanks to all contributors who have helped this project evolve!
