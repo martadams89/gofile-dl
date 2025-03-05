@@ -59,7 +59,8 @@ class TestGoFile(unittest.TestCase):
 
         self.gofile.update_token()
         self.assertEqual(self.gofile.token, "test_token")
-        mock_post.assert_called_once_with("https://api.gofile.io/accounts")
+        # Update the assertion to include the timeout parameter
+        mock_post.assert_called_once_with("https://api.gofile.io/accounts", timeout=10)
 
     @patch('requests.get')
     def test_update_wt(self, mock_get):
