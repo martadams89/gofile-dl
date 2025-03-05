@@ -261,12 +261,12 @@ class TestGoFile(unittest.TestCase):
         """Test execute method with a single file"""
         with patch('run.GoFile.update_token'), patch('run.GoFile.update_wt'), \
              patch.object(self.gofile, "get_content", return_value={
-                "status": "ok",
-                "data": {
-                    "type": "file",
-                    "name": "test_file.txt",
-                    "link": "https://example.com/test_file.txt"
-                }
+                 "status": "ok",
+                 "data": {
+                     "type": "file",
+                     "name": "test_file.txt",
+                     "link": "https://example.com/test_file.txt"
+                 }
              }) as mock_get_content, \
              patch('run.GoFile.download') as mock_download:
                  
@@ -284,9 +284,7 @@ class TestGoFile(unittest.TestCase):
                 cancel_event=cancel_event
             )
             
-            # Verify get_content was called properly on the instance
             mock_get_content.assert_called_with("abc123", None)
-            # Verify download was called once with the proper parameters
             mock_download.assert_called_once()
             name_cb.assert_called_with("test_file.txt")
 
