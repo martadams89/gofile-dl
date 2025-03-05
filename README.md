@@ -2,7 +2,7 @@
 
 **Note: This project began as a fork of [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl) but has since evolved into a completely rebuilt application with a different architecture and extensive new features.**
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![Python](https://img.shields.io/badge/python-3.7%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
