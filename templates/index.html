@@ -1,23 +1,34 @@
 <!doctype html>
 <html lang="en" data-bs-theme="light">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>GoFile Downloader</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
     <style>
       body {
         /* Changed background URL to a Picsum image */
-        background: url("https://picsum.photos/1920/1080") no-repeat center center fixed !important;
+        background: url("https://picsum.photos/1920/1080") no-repeat center
+          center fixed !important;
         background-size: cover !important;
-        transition: background-color 0.3s, color 0.3s;
+        transition:
+          background-color 0.3s,
+          color 0.3s;
       }
       .content-wrapper {
         background-color: rgba(255, 255, 255, 0.85);
         padding: 2rem;
         border-radius: 10px;
-        transition: background-color 0.3s, color 0.3s;
+        transition:
+          background-color 0.3s,
+          color 0.3s;
       }
       .dark-mode {
         color-scheme: dark;
@@ -68,8 +79,8 @@
           padding: 1rem;
         }
         .btn-group-sm .btn {
-          padding: .25rem .5rem;
-          font-size: .75rem;
+          padding: 0.25rem 0.5rem;
+          font-size: 0.75rem;
         }
         .task-controls {
           display: flex;
@@ -109,8 +120,8 @@
         margin-right: 70px; /* Make space for the badge */
       }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container content-wrapper my-4">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="d-flex align-items-center">
@@ -128,13 +139,10 @@
           <span id="mode-text">Toggle Mode</span>
         </button>
       </div>
-      {% with messages = get_flashed_messages(with_categories=true) %} 
-        {% if messages %} 
-          {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-          {% endfor %} 
-        {% endif %} 
-      {% endwith %}
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %} {% endif %} {% endwith %}
       <!-- Filter Controls -->
       <!-- Dashboard with Statistics -->
       <div id="stats-dashboard" class="mb-4">
@@ -143,7 +151,9 @@
           <div class="col-md-3 col-6">
             <div class="card bg-primary text-white dashboard-card h-100">
               <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-cloud-download me-2"></i>Total</h5>
+                <h5 class="card-title">
+                  <i class="bi bi-cloud-download me-2"></i>Total
+                </h5>
                 <p class="card-text display-6" id="stats-total">0</p>
               </div>
             </div>
@@ -151,7 +161,9 @@
           <div class="col-md-3 col-6">
             <div class="card bg-success text-white dashboard-card h-100">
               <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-check-circle me-2"></i>Completed</h5>
+                <h5 class="card-title">
+                  <i class="bi bi-check-circle me-2"></i>Completed
+                </h5>
                 <p class="card-text display-6" id="stats-completed">0</p>
               </div>
             </div>
@@ -159,7 +171,9 @@
           <div class="col-md-3 col-6">
             <div class="card bg-warning text-dark dashboard-card h-100">
               <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-hourglass-split me-2"></i>Active</h5>
+                <h5 class="card-title">
+                  <i class="bi bi-hourglass-split me-2"></i>Active
+                </h5>
                 <p class="card-text display-6" id="stats-active">0</p>
               </div>
             </div>
@@ -167,7 +181,9 @@
           <div class="col-md-3 col-6">
             <div class="card bg-danger text-white dashboard-card h-100">
               <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-exclamation-triangle me-2"></i>Errors</h5>
+                <h5 class="card-title">
+                  <i class="bi bi-exclamation-triangle me-2"></i>Errors
+                </h5>
                 <p class="card-text display-6" id="stats-errors">0</p>
               </div>
             </div>
@@ -175,7 +191,7 @@
         </div>
       </div>
       <form id="download-form" class="mb-3">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <div class="mb-3">
           <label for="url" class="form-label">GoFile URL</label>
           <input
@@ -221,7 +237,9 @@
         </div>
         <div class="row mb-3">
           <div class="col-md-6">
-            <label for="throttle" class="form-label">Download Speed Limit (KB/s)</label>
+            <label for="throttle" class="form-label"
+              >Download Speed Limit (KB/s)</label
+            >
             <input
               type="number"
               class="form-control"
@@ -244,7 +262,9 @@
               min="0"
               max="10"
             />
-            <div class="form-text">Number of retry attempts on failure (0-10)</div>
+            <div class="form-text">
+              Number of retry attempts on failure (0-10)
+            </div>
           </div>
         </div>
         <button type="submit" class="btn btn-primary">
@@ -256,11 +276,13 @@
         <div class="col-md-6">
           <!-- Filter Controls -->
           <div class="d-flex align-items-center mb-2">
-            <label for="filter-select" class="form-label me-2 mb-0">Show tasks older than:</label>
+            <label for="filter-select" class="form-label me-2 mb-0"
+              >Show tasks older than:</label
+            >
             <select
               id="filter-select"
               class="form-select form-select-sm"
-              style="width: auto;"
+              style="width: auto"
             >
               <option value="0">All</option>
               <option value="1">1 day</option>
@@ -274,11 +296,13 @@
         <div class="col-md-6">
           <!-- Group/Sort Controls -->
           <div class="d-flex align-items-center mb-2">
-            <label for="group-select" class="form-label me-2 mb-0">Group by:</label>
+            <label for="group-select" class="form-label me-2 mb-0"
+              >Group by:</label
+            >
             <select
               id="group-select"
               class="form-select form-select-sm"
-              style="width: auto;"
+              style="width: auto"
             >
               <option value="none">None</option>
               <option value="status">Status</option>
@@ -295,7 +319,11 @@
     </div>
 
     <!-- Toast container -->
-    <div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055"></div>
+    <div
+      id="toast-container"
+      class="position-fixed bottom-0 end-0 p-3"
+      style="z-index: 1055"
+    ></div>
     <!-- Updated Modal: Directory Browsing -->
     <div
       class="modal fade"
@@ -360,32 +388,32 @@
     <script>
       let currentPath = "";
       // Initialize theme from localStorage or default to light
-      document.addEventListener('DOMContentLoaded', function() {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-          document.documentElement.setAttribute('data-bs-theme', 'dark');
-          document.body.classList.add('dark-mode');
-          document.getElementById('mode-text').textContent = 'Light Mode';
+      document.addEventListener("DOMContentLoaded", function () {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+          document.documentElement.setAttribute("data-bs-theme", "dark");
+          document.body.classList.add("dark-mode");
+          document.getElementById("mode-text").textContent = "Light Mode";
         } else {
-          document.documentElement.setAttribute('data-bs-theme', 'light');
-          document.getElementById('mode-text').textContent = 'Dark Mode';
+          document.documentElement.setAttribute("data-bs-theme", "light");
+          document.getElementById("mode-text").textContent = "Dark Mode";
         }
       });
       // Update theme toggle to save preference
       document.getElementById("mode-toggle").addEventListener("click", () => {
         const isDarkMode = document.body.classList.toggle("dark-mode");
         if (isDarkMode) {
-          document.documentElement.setAttribute('data-bs-theme', 'dark');
-          document.getElementById('mode-text').textContent = 'Light Mode';
-          localStorage.setItem('theme', 'dark');
+          document.documentElement.setAttribute("data-bs-theme", "dark");
+          document.getElementById("mode-text").textContent = "Light Mode";
+          localStorage.setItem("theme", "dark");
         } else {
-          document.documentElement.setAttribute('data-bs-theme', 'light');
-          document.getElementById('mode-text').textContent = 'Dark Mode';
-          localStorage.setItem('theme', 'light');
+          document.documentElement.setAttribute("data-bs-theme", "light");
+          document.getElementById("mode-text").textContent = "Dark Mode";
+          localStorage.setItem("theme", "light");
         }
       });
       function loadDirectories(path = "") {
-        fetch('/browse?path=' + encodeURIComponent(path))
+        fetch("/browse?path=" + encodeURIComponent(path))
           .then((response) => response.json())
           .then((data) => {
             currentPath = data.current;
@@ -441,10 +469,11 @@
       });
       // Format file size in a human-readable format
       function formatFileSize(bytes) {
-        if (bytes === 0 || bytes === undefined || bytes === null) return "Unknown";
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        if (bytes === 0 || bytes === undefined || bytes === null)
+          return "Unknown";
+        const sizes = ["B", "KB", "MB", "GB", "TB"];
         const i = Math.floor(Math.log(bytes) / Math.log(1024));
-        return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+        return (bytes / Math.pow(1024, i)).toFixed(2) + " " + sizes[i];
       }
       // Toast notification function (ensure a toast container exists in your body)
       function showToast(message, type = "info") {
@@ -477,8 +506,8 @@
             method: "POST",
             body: formData,
             headers: {
-              'X-CSRFToken': getCSRFToken()
-            }
+              "X-CSRFToken": getCSRFToken(),
+            },
           })
             .then((response) => response.json())
             .then((data) => {
@@ -507,7 +536,7 @@
           total: Object.keys(tasks).length,
           completed: 0,
           active: 0,
-          errors: 0
+          errors: 0,
         };
         for (const taskId in tasks) {
           const task = tasks[taskId];
@@ -516,7 +545,8 @@
           else stats.active++; // running, paused, etc.
         }
         document.getElementById("stats-total").textContent = stats.total;
-        document.getElementById("stats-completed").textContent = stats.completed;
+        document.getElementById("stats-completed").textContent =
+          stats.completed;
         document.getElementById("stats-active").textContent = stats.active;
         document.getElementById("stats-errors").textContent = stats.errors;
       }
@@ -533,9 +563,13 @@
             const filterDays = getFilterDays();
             const groupOption = getGroupOption();
             // Filter tasks
-            let filteredTasks = Object.entries(tasksData).filter(([_, info]) => {
-              return filterDays === 0 || (now - info.timestamp) < filterDays * 86400;
-            });
+            let filteredTasks = Object.entries(tasksData).filter(
+              ([_, info]) => {
+                return (
+                  filterDays === 0 || now - info.timestamp < filterDays * 86400
+                );
+              },
+            );
             // If grouping is enabled
             if (groupOption !== "none") {
               // Create groups
@@ -550,26 +584,33 @@
                   groupedTasks[status].push([taskId, info]);
                 });
                 // Define display order
-                const statusOrder = ["running", "paused", "completed", "error", "cancelled", "unknown"];
+                const statusOrder = [
+                  "running",
+                  "paused",
+                  "completed",
+                  "error",
+                  "cancelled",
+                  "unknown",
+                ];
                 const statusLabels = {
-                  "running": "Active", 
-                  "paused": "Paused", 
-                  "completed": "Completed", 
-                  "error": "Error",
-                  "cancelled": "Cancelled",
-                  "unknown": "Unknown"
+                  running: "Active",
+                  paused: "Paused",
+                  completed: "Completed",
+                  error: "Error",
+                  cancelled: "Cancelled",
+                  unknown: "Unknown",
                 };
                 // Display each group
-                statusOrder.forEach(status => {
+                statusOrder.forEach((status) => {
                   if (groupedTasks[status] && groupedTasks[status].length > 0) {
                     // Add group header
                     const headerStyle = {
-                      "running": "bg-warning text-dark",
-                      "paused": "bg-info text-dark",
-                      "completed": "bg-success text-white",
-                      "error": "bg-danger text-white",
-                      "cancelled": "bg-secondary text-white",
-                      "unknown": "bg-light text-dark"
+                      running: "bg-warning text-dark",
+                      paused: "bg-info text-dark",
+                      completed: "bg-success text-white",
+                      error: "bg-danger text-white",
+                      cancelled: "bg-secondary text-white",
+                      unknown: "bg-light text-dark",
                     };
                     const header = document.createElement("div");
                     header.className = `category-header ${headerStyle[status] || "bg-light"}`;
@@ -584,16 +625,16 @@
               } else if (groupOption === "date") {
                 // Group by date (today, yesterday, this week, older)
                 const today = new Date();
-                today.setHours(0,0,0,0);
+                today.setHours(0, 0, 0, 0);
                 const yesterday = new Date(today);
                 yesterday.setDate(yesterday.getDate() - 1);
                 const thisWeek = new Date(today);
                 thisWeek.setDate(thisWeek.getDate() - 7);
                 const dateGroups = {
-                  "today": [],
-                  "yesterday": [],
-                  "thisWeek": [],
-                  "older": []
+                  today: [],
+                  yesterday: [],
+                  thisWeek: [],
+                  older: [],
                 };
                 filteredTasks.forEach(([taskId, info]) => {
                   const taskDate = new Date(info.timestamp * 1000);
@@ -608,14 +649,19 @@
                   }
                 });
                 // Display date groups
-                const dateGroupOrder = ["today", "yesterday", "thisWeek", "older"];
+                const dateGroupOrder = [
+                  "today",
+                  "yesterday",
+                  "thisWeek",
+                  "older",
+                ];
                 const dateLabels = {
-                  "today": "Today", 
-                  "yesterday": "Yesterday", 
-                  "thisWeek": "This Week", 
-                  "older": "Older"
+                  today: "Today",
+                  yesterday: "Yesterday",
+                  thisWeek: "This Week",
+                  older: "Older",
                 };
-                dateGroupOrder.forEach(dateGroup => {
+                dateGroupOrder.forEach((dateGroup) => {
                   if (dateGroups[dateGroup].length > 0) {
                     const header = document.createElement("div");
                     header.className = "category-header bg-light";
@@ -659,11 +705,11 @@
         }
         // Add status badge
         const statusBadgeClass = {
-          "completed": "bg-success",
-          "error": "bg-danger",
-          "running": "bg-warning text-dark",
-          "paused": "bg-info",
-          "cancelled": "bg-secondary"
+          completed: "bg-success",
+          error: "bg-danger",
+          running: "bg-warning text-dark",
+          paused: "bg-info",
+          cancelled: "bg-secondary",
         };
         const body = document.createElement("div");
         body.className = "card-body position-relative";
@@ -672,15 +718,18 @@
         const isPaused = info.paused;
         const pauseButtonText = isPaused ? "Resume" : "Pause";
         // Status badge
-        const badgeHTML = `<span class="badge ${statusBadgeClass[info.status] || 'bg-secondary'} task-badge">${info.status}</span>`;
+        const badgeHTML = `<span class="badge ${statusBadgeClass[info.status] || "bg-secondary"} task-badge">${info.status}</span>`;
         // Calculate total file size if available
         let totalSize = 0;
         if (info.files && info.files.length > 0) {
-          info.files.forEach(f => {
+          info.files.forEach((f) => {
             if (f.size) totalSize += f.size;
           });
         }
-        const sizeDisplay = totalSize > 0 ? `<small class="text-muted ms-2">(${formatFileSize(totalSize)})</small>` : '';
+        const sizeDisplay =
+          totalSize > 0
+            ? `<small class="text-muted ms-2">(${formatFileSize(totalSize)})</small>`
+            : "";
         body.innerHTML = `
           ${badgeHTML}
           <div class="d-flex justify-content-between card-header-flex">
@@ -708,10 +757,12 @@
           </div>`;
         // Show files only if present
         if (info.files && info.files.length > 0) {
-          const filesList = document.createElement('div');
-          filesList.className = 'task-file-list mb-3';
-          info.files.forEach(f => {
-            const fileSize = f.size ? ` <span class="file-size">${formatFileSize(f.size)}</span>` : '';
+          const filesList = document.createElement("div");
+          filesList.className = "task-file-list mb-3";
+          info.files.forEach((f) => {
+            const fileSize = f.size
+              ? ` <span class="file-size">${formatFileSize(f.size)}</span>`
+              : "";
             filesList.innerHTML += `
               <div class="ms-3 mb-1">
                 <i class="bi bi-file-earmark me-1"></i>
@@ -726,11 +777,11 @@
           body.appendChild(filesList);
         }
         // Controls section
-        const controls = document.createElement('div');
-        controls.className = 'task-controls';
+        const controls = document.createElement("div");
+        controls.className = "task-controls";
         controls.innerHTML = `
           <button class="btn btn-warning btn-sm me-2" onclick="pauseTask('${taskId}')">
-            <i class="bi bi-${isPaused ? 'play' : 'pause'} me-1"></i>${pauseButtonText}
+            <i class="bi bi-${isPaused ? "play" : "pause"} me-1"></i>${pauseButtonText}
           </button>
           <button class="btn btn-danger btn-sm" onclick="cancelTask('${taskId}')">
             <i class="bi bi-x-circle me-1"></i>Cancel
@@ -742,15 +793,19 @@
       }
       // Poll tasks every 3 seconds and when controls change
       setInterval(loadTasks, 3000);
-      document.getElementById("filter-select").addEventListener("change", loadTasks);
-      document.getElementById("group-select").addEventListener("change", loadTasks);
+      document
+        .getElementById("filter-select")
+        .addEventListener("change", loadTasks);
+      document
+        .getElementById("group-select")
+        .addEventListener("change", loadTasks);
       loadTasks();
       function removeTask(taskId) {
-        fetch("/remove/" + taskId, { 
+        fetch("/remove/" + taskId, {
           method: "POST",
           headers: {
-            'X-CSRFToken': getCSRFToken()
-          }
+            "X-CSRFToken": getCSRFToken(),
+          },
         })
           .then((response) => response.json())
           .then((data) => {
@@ -759,11 +814,11 @@
           });
       }
       function cancelTask(taskId) {
-        fetch("/cancel/" + taskId, { 
+        fetch("/cancel/" + taskId, {
           method: "POST",
           headers: {
-            'X-CSRFToken': getCSRFToken()
-          }
+            "X-CSRFToken": getCSRFToken(),
+          },
         })
           .then((response) => response.json())
           .then((data) => {
@@ -772,11 +827,11 @@
           });
       }
       function pauseTask(taskId) {
-        fetch("/pause/" + taskId, { 
+        fetch("/pause/" + taskId, {
           method: "POST",
           headers: {
-            'X-CSRFToken': getCSRFToken()
-          }
+            "X-CSRFToken": getCSRFToken(),
+          },
         })
           .then((response) => response.json())
           .then((data) => {
@@ -812,11 +867,11 @@
             "Are you sure you want to delete this task's files from disk?",
           )
         ) {
-          fetch("/delete/" + taskId, { 
+          fetch("/delete/" + taskId, {
             method: "POST",
             headers: {
-              'X-CSRFToken': getCSRFToken()
-            }
+              "X-CSRFToken": getCSRFToken(),
+            },
           })
             .then((response) => response.json())
             .then((data) => {
@@ -829,22 +884,27 @@
       function getCSRFToken() {
         return document.querySelector('input[name="csrf_token"]').value;
       }
-      
+
       // Add CSRF header to all AJAX requests
-      document.addEventListener("DOMContentLoaded", function() {
-          // Add CSRF token to all AJAX requests
-          const originalFetch = window.fetch;
-          window.fetch = function(url, options) {
-              options = options || {};
-              
-              // Only add the CSRF token for POST, PUT, PATCH and DELETE requests
-              if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
-                  options.headers = options.headers || {};
-                  options.headers['X-CSRFToken'] = getCSRFToken();
-              }
-              
-              return originalFetch(url, options);
-          };
+      document.addEventListener("DOMContentLoaded", function () {
+        // Add CSRF token to all AJAX requests
+        const originalFetch = window.fetch;
+        window.fetch = function (url, options) {
+          options = options || {};
+
+          // Only add the CSRF token for POST, PUT, PATCH and DELETE requests
+          if (
+            options.method &&
+            ["POST", "PUT", "PATCH", "DELETE"].includes(
+              options.method.toUpperCase(),
+            )
+          ) {
+            options.headers = options.headers || {};
+            options.headers["X-CSRFToken"] = getCSRFToken();
+          }
+
+          return originalFetch(url, options);
+        };
       });
     </script>
   </body>

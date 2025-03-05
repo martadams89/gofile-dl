@@ -7,15 +7,15 @@ on:
   push:
     branches: [main, master, dev]
     paths-ignore:
-      - '**.md'
-      - 'LICENSE'
-      - '.gitignore'
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
   pull_request:
     branches: [main, master]
     paths-ignore:
-      - '**.md'
-      - 'LICENSE'
-      - '.gitignore'
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
   workflow_dispatch:
 
 concurrency:
@@ -40,8 +40,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
 
       - name: Install Python dependencies
         run: |

@@ -8,19 +8,21 @@
 
 A powerful, modern web application and CLI tool for downloading files and folders from GoFile.io links. Featuring a responsive web interface, task management, progress tracking, and Docker support.
 
-*Originally inspired by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl) but completely rebuilt with extensive enhancements and a modern architecture.*
+_Originally inspired by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl) but completely rebuilt with extensive enhancements and a modern architecture._
 
 ![GoFile Downloader Screenshot](assets/screenshot.png)
 
 ## Features
 
 ### Core Functionality
+
 - Download individual files or entire folder structures from GoFile.io links
 - Support for password-protected content
 - CLI and web interface options
 - Automatic retry on failed downloads
 
 ### Web Interface
+
 - Modern, responsive design with Bootstrap 5
 - Light/dark mode toggle with preference saving
 - Interactive file system browser for selecting download locations
@@ -29,6 +31,7 @@ A powerful, modern web application and CLI tool for downloading files and folder
 - Comprehensive dashboard with download statistics
 
 ### Advanced Features
+
 - Download speed limiting/throttling
 - Configurable retry attempts for failed downloads
 - Pause/resume downloads
@@ -38,6 +41,7 @@ A powerful, modern web application and CLI tool for downloading files and folder
 - Authentication for security
 
 ### Deployment
+
 - Docker and Docker Compose support
 - Environment variable configuration
 - Health check endpoint for container monitoring
@@ -62,7 +66,7 @@ docker run -d --name gofile-dl \
   -p 2355:2355 \
   -v /your/download/path:/data \
   gofile-dl:latest
-```
+````
 
 ### Docker Compose Deployment
 
@@ -109,18 +113,18 @@ docker-compose up -d
 
 ### Environment Variables Reference
 
-| Variable | Description | Default | Example |
-|----------|-------------|---------|---------|
-| `PORT` | Web server port | `2355` | `8080` |
-| `HOST` | Web server host | `0.0.0.0` | `127.0.0.1` |
-| `BASE_DIR` | Base directory for downloads | `/app` | `/downloads` |
-| `SECRET_KEY` | Flask secret key for sessions | Random value | `my-secret-key` |
-| `DEBUG` | Enable Flask debug mode | `false` | `true` |
-| `AUTH_ENABLED` | Enable basic authentication | `false` | `true` |
-| `AUTH_USERNAME` | Authentication username | `admin` | `user` |
-| `AUTH_PASSWORD` | Authentication password | `change-me-in-production` | `secure-password` |
-| `DEFAULT_RETRIES` | Default retry attempts | `3` | `5` |
-| `RETRY_DELAY` | Seconds between retry attempts | `5` | `10` |
+| Variable          | Description                    | Default                   | Example           |
+| ----------------- | ------------------------------ | ------------------------- | ----------------- |
+| `PORT`            | Web server port                | `2355`                    | `8080`            |
+| `HOST`            | Web server host                | `0.0.0.0`                 | `127.0.0.1`       |
+| `BASE_DIR`        | Base directory for downloads   | `/app`                    | `/downloads`      |
+| `SECRET_KEY`      | Flask secret key for sessions  | Random value              | `my-secret-key`   |
+| `DEBUG`           | Enable Flask debug mode        | `false`                   | `true`            |
+| `AUTH_ENABLED`    | Enable basic authentication    | `false`                   | `true`            |
+| `AUTH_USERNAME`   | Authentication username        | `admin`                   | `user`            |
+| `AUTH_PASSWORD`   | Authentication password        | `change-me-in-production` | `secure-password` |
+| `DEFAULT_RETRIES` | Default retry attempts         | `3`                       | `5`               |
+| `RETRY_DELAY`     | Seconds between retry attempts | `5`                       | `10`              |
 
 ### Docker Volumes
 
@@ -184,10 +188,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.50'
+          cpus: "0.50"
           memory: 512M
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 128M
     restart: unless-stopped
 ```
@@ -228,16 +232,19 @@ Example health check response:
 ### Troubleshooting Docker Deployment
 
 1. **Container fails to start**
+
    - Check logs: `docker logs gofile-dl`
    - Verify environment variables are correctly set
    - Ensure the download directory has correct permissions
 
 2. **Cannot access web interface**
+
    - Confirm port mapping: `docker ps`
    - Check if the host firewall allows access to the port
    - Verify the container is running: `docker ps | grep gofile-dl`
 
 3. **Download files not appearing**
+
    - Check the volume mounting: `docker inspect gofile-dl`
    - Verify the BASE_DIR environment variable is set correctly
    - Check directory permissions
