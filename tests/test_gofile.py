@@ -108,8 +108,8 @@ class TestGoFile(unittest.TestCase):
             self.assertEqual(call_args[0], "https://example.com/download/test_file.txt")
             self.assertEqual(call_args[1], expected_path)
 
-    @patch('requests.get')
-    @patch('time.sleep', return_value=None)  # Don't actually sleep in tests
+    @patch("requests.get")
+    @patch("time.sleep", return_value=None)  # Don't actually sleep in tests
     def test_download_with_retry(self, mock_sleep, mock_get):
         """Test download with retry functionality"""
         test_file = os.path.join(self.temp_dir, "test_retry.txt")
@@ -123,10 +123,17 @@ class TestGoFile(unittest.TestCase):
         mock_response_success.headers.get.return_value = "100"
         mock_response_success.iter_content.return_value = [b"test data"]
         
+        # Important: The correct way to mock side_effect
         mock_get.side_effect = [mock_response_fail, mock_response_fail, mock_response_success]
         
         # Run download with 3 retries (2 will fail, 3rd will succeed)
-        self.gofile.download(link="https://example.com/test.txt", file=test_file, retry_attempts=3)
+        # Add retry_delay=0 to avoid actual sleeping
+        self.gofile.download(
+            link="https://example.com/test.txt", 
+            file=test_file, 
+            retry_attempts=3,
+            retry_delay=0
+        )
         
         # Verify retry behavior
         self.assertEqual(mock_get.call_count, 3)
