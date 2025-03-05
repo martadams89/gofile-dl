@@ -257,38 +257,38 @@ class TestGoFile(unittest.TestCase):
     @patch('run.GoFile.update_wt')
     @patch('run.GoFile.get_content')
     @patch('run.GoFile.download')
-    def test_execute_file(self, mock_download, mock_get_content, *args):
+    def test_execute_file(self):
         """Test execute method with a single file"""
-        # Mock content response for a single file
-        mock_get_content.return_value = {
-            "status": "ok",
-            "data": {
-                "type": "file",
-                "name": "test_file.txt",
-                "link": "https://example.com/test_file.txt"
-            }
-        }
-        
-        # Test callbacks
-        progress_cb = MagicMock()
-        file_progress_cb = MagicMock()
-        name_cb = MagicMock()
-        cancel_event = Event()
-        
-        # Execute with content_id
-        self.gofile.execute(
-            dir=self.temp_dir,
-            content_id="abc123",
-            progress_callback=progress_cb,
-            file_progress_callback=file_progress_cb,
-            name_callback=name_cb,
-            cancel_event=cancel_event
-        )
-        
-        # Verify content was fetched and download was called
-        mock_get_content.assert_called_with("abc123", None)
-        mock_download.assert_called_once()
-        name_cb.assert_called_with("test_file.txt")
+        with patch('run.GoFile.update_token'), patch('run.GoFile.update_wt'), \
+             patch.object(self.gofile, "get_content", return_value={
+                "status": "ok",
+                "data": {
+                    "type": "file",
+                    "name": "test_file.txt",
+                    "link": "https://example.com/test_file.txt"
+                }
+             }) as mock_get_content, \
+             patch('run.GoFile.download') as mock_download:
+                 
+            progress_cb = MagicMock()
+            file_progress_cb = MagicMock()
+            name_cb = MagicMock()
+            cancel_event = Event()
+            
+            self.gofile.execute(
+                dir=self.temp_dir,
+                content_id="abc123",
+                progress_callback=progress_cb,
+                file_progress_callback=file_progress_cb,
+                name_callback=name_cb,
+                cancel_event=cancel_event
+            )
+            
+            # Verify get_content was called properly on the instance
+            mock_get_content.assert_called_with("abc123", None)
+            # Verify download was called once with the proper parameters
+            mock_download.assert_called_once()
+            name_cb.assert_called_with("test_file.txt")
 
     @patch('run.GoFile.get_content')
     @patch('run.GoFile.download')
