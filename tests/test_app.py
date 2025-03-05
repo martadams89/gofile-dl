@@ -18,9 +18,13 @@ class TestFlaskApp(unittest.TestCase):
         self.app = app.app
         self.app.config['TESTING'] = True
         self.app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for testing
+        
+        # Explicitly disable authentication for tests
+        app.config["auth"]["enabled"] = False
+        
         self.client = self.app.test_client()
         
-        # Mock the config to enable auth for auth tests
+        # Store original config to restore later
         self.original_config = app.config.copy()
         
         # Create a temporary directory for tests

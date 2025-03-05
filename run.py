@@ -15,6 +15,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("GoFile")
 
+DEFAULT_TIMEOUT = 10  # 10 seconds
+
 class GoFileMeta(type):
     """
     Metaclass for implementing the Singleton pattern.
@@ -66,7 +68,7 @@ class GoFile(metaclass=GoFileMeta):
         Makes a request to GoFile's accounts API to get a fresh token.
         """
         if self.token == "":
-            data = requests.post("https://api.gofile.io/accounts").json()
+            data = requests.post("https://api.gofile.io/accounts", timeout=DEFAULT_TIMEOUT).json()
             if data.get("status") == "ok":
                 self.token = data["data"].get("token", "")
                 logger.info(f"Updated token: {self.token}")
@@ -80,7 +82,7 @@ class GoFile(metaclass=GoFileMeta):
         Extracts the wt parameter from GoFile's JavaScript code.
         """
         if self.wt == "":
-            alljs = requests.get("https://gofile.io/dist/js/global.js").text
+            alljs = requests.get("https://gofile.io/dist/js/global.js", timeout=DEFAULT_TIMEOUT).text
             if 'appdata.wt = "' in alljs:
                 self.wt = alljs.split('appdata.wt = "')[1].split('"')[0]
                 logger.info(f"Updated wt: {self.wt}")
@@ -129,6 +131,7 @@ class GoFile(metaclass=GoFileMeta):
             response = requests.get(
                 f"https://api.gofile.io/contents/{content_id}?wt={self.wt}&cache=true&password={hash_password}",
                 headers={"Authorization": "Bearer " + self.token},
+                timeout=DEFAULT_TIMEOUT
             )
             data = response.json()
             if data.get("status") != "ok":
@@ -256,7 +259,7 @@ class GoFile(metaclass=GoFileMeta):
                     link, headers={
                         "Cookie": f"accountToken={self.token}",
                         "Range": f"bytes={size}-"
-                    }, stream=True
+                    }, stream=True, timeout=DEFAULT_TIMEOUT
                 ) as r:
                     r.raise_for_status()
                     total_size = int(r.headers.get("Content-Length", 0)) + size

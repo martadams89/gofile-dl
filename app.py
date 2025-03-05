@@ -6,7 +6,7 @@ from run import GoFile
 import time
 import shutil
 import yaml
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List, Union, Callable
 from flask_wtf import CSRFProtect
 from functools import wraps
 import secrets
@@ -19,7 +19,7 @@ load_dotenv()
 
 # Environment variable validation
 def get_env_var(var_name: str, default: Any = None, required: bool = False, 
-                type_func: Optional[callable] = None) -> Any:
+                type_func: Optional[Callable[[str], Any]] = None) -> Any:
     """
     Get and validate environment variables with type conversion and validation
     
@@ -82,363 +82,368 @@ except (FileNotFoundError, yaml.YAMLError):
     try:
         with open(CONFIG_FILE, 'w') as f:
             yaml.dump(DEFAULT_CONFIG, f, default_flow_style=False)
-    except:
-        pass  # Fail silently if can't write default config
-
+    except:ror as e:  # Replace bare except with specific exception
+        pass  # Fail silently if can't write default configBetter than silent pass
+    pass  # Keep the pass to maintain behavior but with a log message
 # Ensure config structure matches our expected schema by providing defaults
-# for any missing keys
+# for any missing keysure matches our expected schema by providing defaults
 if "auth" not in config:
     config["auth"] = DEFAULT_CONFIG["auth"]
-elif not isinstance(config["auth"], dict):
+elif not isinstance(config["auth"], dict):]
     config["auth"] = DEFAULT_CONFIG["auth"]
-    
+    config["auth"] = DEFAULT_CONFIG["auth"]
 if "csrf" not in config:
     config["csrf"] = DEFAULT_CONFIG["csrf"]
-    
+    config["csrf"] = DEFAULT_CONFIG["csrf"]
 # Now safely override with environment variables if present
 config["port"] = get_env_var("PORT", config["port"], False, int)
-config["host"] = get_env_var("HOST", config["host"])
+config["host"] = get_env_var("HOST", config["host"]) False, int)
 config["base_dir"] = get_env_var("BASE_DIR", config["base_dir"])
 config["secret_key"] = get_env_var("SECRET_KEY", config["secret_key"])
-
+config["secret_key"] = get_env_var("SECRET_KEY", config["secret_key"])
 # Safe access to nested config values
 auth_enabled = config["auth"].get("enabled", DEFAULT_CONFIG["auth"]["enabled"])
 config["auth"]["enabled"] = get_env_var("AUTH_ENABLED", auth_enabled, False, lambda x: x.lower() == "true")
 config["auth"]["username"] = get_env_var("AUTH_USERNAME", config["auth"].get("username", DEFAULT_CONFIG["auth"]["username"]))
 config["auth"]["password"] = get_env_var("AUTH_PASSWORD", config["auth"].get("password", DEFAULT_CONFIG["auth"]["password"]))
-
+config["auth"]["password"] = get_env_var("AUTH_PASSWORD", config["auth"].get("password", DEFAULT_CONFIG["auth"]["password"]))
 app = Flask(__name__)
 app.secret_key = config["secret_key"]
-
+app.secret_key = config["secret_key"]
 # Enable CSRF protection
-csrf = CSRFProtect(app)
+csrf = CSRFProtect(app)n
+csrf.init_app(app)(app)
 csrf.init_app(app)
-
 # Global dict to track download tasks
 download_tasks: Dict[str, Dict[str, Any]] = {}
-
+download_tasks: Dict[str, Dict[str, Any]] = {}
 # Basic authentication
 def check_auth(username, password):
     """Check if username and password are valid"""
-    if not config["auth"]["enabled"]:
-        return True
+    if not config["auth"]["enabled"]: are valid"""
+        return Trueauth"]["enabled"]:
     return username == config["auth"]["username"] and password == config["auth"]["password"]
-
+    return username == config["auth"]["username"] and password == config["auth"]["password"]
 def authenticate():
     """Send a 401 response requesting basic auth"""
-    return Response(
+    return Response(sponse requesting basic auth"""
         'Authentication required\n',
-        401,
+        401,hentication required\n',
         {'WWW-Authenticate': 'Basic realm="gofile-dl"'}
+    )   {'WWW-Authenticate': 'Basic realm="gofile-dl"'}
     )
-
 def requires_auth(f):
-    @wraps(f)
+    @wraps(f)auth(f):
     def decorated(*args, **kwargs):
         if not config["auth"]["enabled"]:
+            return f(*args, **kwargs)d"]:
             return f(*args, **kwargs)
-            
         auth = request.authorization
         if not auth or not check_auth(auth.username, auth.password):
-            return authenticate()
+            return authenticate()auth(auth.username, auth.password):
         return f(*args, **kwargs)
+    return decoratedgs, **kwargs)
     return decorated
-
 # Health check endpoint
 @app.route('/health', methods=['GET'])
-def health_check():
+def health_check():', methods=['GET'])
     """Health check endpoint for monitoring"""
-    try:
+    try:ealth check endpoint for monitoring"""
         import psutil
         # Collect basic system information
-        system_info = {
+        system_info = { system information
             'system': platform.system(),
             'python_version': platform.python_version(),
             'cpu_usage': psutil.cpu_percent(interval=0.1),
-            'memory': {
+            'memory': {: psutil.cpu_percent(interval=0.1),
                 'total': psutil.virtual_memory().total,
                 'available': psutil.virtual_memory().available,
-                'percent': psutil.virtual_memory().percent,
-            },
+                'percent': psutil.virtual_memory().percent,ble,
+            },  'percent': psutil.virtual_memory().percent,
             'disk': {
                 'total': psutil.disk_usage('/').total,
-                'free': psutil.disk_usage('/').free,
+                'free': psutil.disk_usage('/').free,l,
                 'percent': psutil.disk_usage('/').percent,
-            }
-        }
+            }   'percent': psutil.disk_usage('/').percent,
+        }   }
     except ImportError:
         # Fallback if psutil is not available
-        system_info = {
+        system_info = {sutil is not available
             'system': platform.system(),
             'python_version': platform.python_version(),
             'note': 'Extended system metrics unavailable - psutil not installed'
+        }   'note': 'Extended system metrics unavailable - psutil not installed'
         }
-    
     # Application status
-    app_info = {
+    app_info = {n status
         'status': 'healthy',
         'active_tasks': sum(1 for task in download_tasks.values() 
                           if task.get('status') == 'running' or task.get('status') == 'paused'),
-        'version': '1.0.0',  # Should be dynamically determined in production
+        'version': '1.0.0',  # Should be dynamically determined in productiontus') == 'paused'),
+    }   'version': '1.0.0',  # Should be dynamically determined in production
     }
-    
     # Return combined status
-    return jsonify({
+    return jsonify({d status
         'status': 'ok',
         'timestamp': time.time(),
-        'system': system_info,
+        'system': system_info,(),
         'application': app_info
+    })  'application': app_info
     })
-
 def download_task(url: str, directory: Optional[str], password: Optional[str], task_id: str) -> None:
-    """
+    """nload_task(url: str, directory: Optional[str], password: Optional[str], task_id: str) -> None:
     Background task for downloading GoFile content.
-    
+    Background task for downloading GoFile content.
     Args:
         url: GoFile URL to download
         directory: Destination directory (or None for default)
-        password: Password for protected content (or None)
+        password: Password for protected content (or None)ult)
         task_id: Unique ID for tracking this download task
-    """
+    """ task_id: Unique ID for tracking this download task
     def progress_callback(percentage):
         download_tasks[task_id]['progress'] = percentage
-    
+        download_tasks[task_id]['progress'] = percentage
     def name_cb(new_name):
         out_dir = directory if directory else "./output"
-        full_path = os.path.join(out_dir, new_name)
+        full_path = os.path.join(out_dir, new_name)tput"
         download_tasks[task_id].update({'name': new_name, 'out_path': full_path})
-    
+        download_tasks[task_id].update({'name': new_name, 'out_path': full_path})
     download_tasks[task_id]['files'] = []  # each element: {'file': filename, 'progress': 0}
-    
+    download_tasks[task_id]['files'] = []  # each element: {'file': filename, 'progress': 0}
     def file_progress_callback(filename, percentage, size=None):
-        file_list = download_tasks[task_id]['files']
-        for record in file_list:
+        file_list = download_tasks[task_id]['files'] size=None):
+        for record in file_list:ks[task_id]['files']
             if record['file'] == filename:
                 record['progress'] = percentage
                 if size is not None:  # Update size if provided
-                    record['size'] = size
-                break
-        else:
+                    record['size'] = sizepdate size if provided
+                breakecord['size'] = size
+        else:   break
             new_record = {'file': filename, 'progress': percentage}
-            if size is not None:
+            if size is not None:: filename, 'progress': percentage}
                 new_record['size'] = size
+            file_list.append(new_record)e
             file_list.append(new_record)
-    
     cancel_event = download_tasks[task_id]['cancel_event']
-    
+    cancel_event = download_tasks[task_id]['cancel_event']
     # Define pause callback that checks the task's paused flag
-    def pause_callback():
+    def pause_callback():ck that checks the task's paused flag
         return download_tasks[task_id].get('paused', False)
-    
+        return download_tasks[task_id].get('paused', False)
     output_dir = directory if directory else "./output"
+    start_time = time.time()f directory else "./output"
     start_time = time.time()
-    
     def overall_progress_callback(percent, eta):
         download_tasks[task_id]['overall_progress'] = percent
+        download_tasks[task_id]['eta'] = etagress'] = percent
         download_tasks[task_id]['eta'] = eta
-    
     # Get throttle and retries from the task config
     throttle_speed = download_tasks[task_id].get('throttle')
     retry_attempts = download_tasks[task_id].get('retries', 3)
-    
+    retry_attempts = download_tasks[task_id].get('retries', 3)
     try:
         GoFile().execute(
             dir=output_dir, url=url, password=password,
             progress_callback=progress_callback, cancel_event=cancel_event,
             name_callback=name_cb, overall_progress_callback=overall_progress_callback,
-            start_time=start_time, file_progress_callback=file_progress_callback,
-            pause_callback=pause_callback, throttle_speed=throttle_speed,
-            retry_attempts=retry_attempts
-        )
+            start_time=start_time, file_progress_callback=file_progress_callback,lback,
+            pause_callback=pause_callback, throttle_speed=throttle_speed,allback,
+            retry_attempts=retry_attempts, throttle_speed=throttle_speed,
+        )   retry_attempts=retry_attempts
         download_tasks[task_id]['status'] = "completed"
-    except Exception as e:
+    except Exception as e:k_id]['status'] = "completed"
         print(f"Task {task_id} error: {e}")
         download_tasks[task_id]['error_message'] = str(e)
-        if cancel_event.is_set():
+        if cancel_event.is_set():error_message'] = str(e)
             download_tasks[task_id]['status'] = "cancelled"
-        else:
+        else:ownload_tasks[task_id]['status'] = "cancelled"
             download_tasks[task_id]['status'] = "error"
+    download_tasks[task_id]['progress'] = 100 = "error"
     download_tasks[task_id]['progress'] = 100
-
 @app.route('/tasks', methods=['GET'])
-@requires_auth
-def tasks():
+@requires_authasks', methods=['GET'])
+def tasks():th
     return jsonify({
-        task_id: {
+        task_id: {({
             'progress': task.get('progress', 0),
             'overall_progress': task.get('overall_progress', 0),
-            'eta': task.get('eta', "N/A"),
+            'eta': task.get('eta', "N/A"),overall_progress', 0),
             'status': task.get('status', 'running'),
             'error_message': task.get('error_message', ""),
-            'url': task.get('url', ""),
+            'url': task.get('url', ""),error_message', ""),
             'name': task.get('name', ""),
             'timestamp': task.get('timestamp', 0),
-            'files': task.get('files', []),
+            'files': task.get('files', []),p', 0),
             'paused': task.get('paused', False)
         } for task_id, task in download_tasks.items()
+    })  } for task_id, task in download_tasks.items()
     })
-
 @app.route('/pause/<task_id>', methods=['POST'])
-@requires_auth
+@requires_authause/<task_id>', methods=['POST'])
 def pause(task_id):
     task = download_tasks.get(task_id)
-    if not task:
+    if not task:oad_tasks.get(task_id)
         return jsonify({"error": "Invalid task id"}), 404
-    
+        return jsonify({"error": "Invalid task id"}), 404
     # Toggle the paused flag and update the status
     task['paused'] = not task.get('paused', False)
     status = "paused" if task['paused'] else "running"
+    task['status'] = statussk['paused'] else "running"
     task['status'] = status
-    
     return jsonify({
         "task_id": task_id, 
         "paused": task['paused'],
-        "status": status
+        "status": statuspaused'],
+    })  "status": status
     })
-
 @app.route('/browse', methods=['GET'])
-@requires_auth
-def browse():
+@requires_authrowse', methods=['GET'])
+def browse():h
     # Allow browsing from BASE_DIR or fully override to "/"
-    base_dir = os.environ.get("BASE_DIR", "/")
-    rel_path = request.args.get("path", "")
+    base_dir = os.environ.get("BASE_DIR", "/")erride to "/"
+    rel_path = request.args.get("path", "")/")
     target_dir = os.path.join(base_dir, rel_path)
-
+    target_dir = os.path.join(base_dir, rel_path)
     # Only check directory existence, no further restrictions
-    if not os.path.isdir(target_dir):
+    if not os.path.isdir(target_dir): no further restrictions
         return jsonify({"error": "Invalid path"}), 400
-
+        return jsonify({"error": "Invalid path"}), 400
     dirs = []
     for item in os.listdir(target_dir):
         fullpath = os.path.join(target_dir, item)
-        if os.path.isdir(fullpath):
+        if os.path.isdir(fullpath):get_dir, item)
+            dirs.append(item)path):
             dirs.append(item)
-
     return jsonify({"directories": dirs, "current": os.path.abspath(target_dir)})
-
+    return jsonify({"directories": dirs, "current": os.path.abspath(target_dir)})
 @app.route('/start', methods=['POST'])
-@requires_auth
+@requires_authtart', methods=['POST'])
 def start_download():
     url = request.form.get('url')
     directory = request.form.get('directory')
+    password = request.form.get('password')')
     password = request.form.get('password')
-    
     # Get new throttle and retry parameters
-    try:
+    try:t new throttle and retry parameters
         throttle = int(request.form.get('throttle')) if request.form.get('throttle') else None
-    except ValueError:
+    except ValueError:(request.form.get('throttle')) if request.form.get('throttle') else None
         throttle = None
-        
+        throttle = None
     try:
         retries = min(max(0, int(request.form.get('retries', 3))), 10)  # Limit to 0-10
-    except ValueError:
+    except ValueError:max(0, int(request.form.get('retries', 3))), 10)  # Limit to 0-10
         retries = 3  # Default to 3 retries
-    
+        retries = 3  # Default to 3 retries
     if not url:
         return jsonify({"error": "URL is required"}), 400
-    
+        return jsonify({"error": "URL is required"}), 400
     task_id = str(uuid.uuid4())
     # Compute a friendly task name from directory or URL
-    if directory:
+    if directory:riendly task name from directory or URL
         name = os.path.basename(directory.rstrip("/\\"))
-        if not name:
+        if not name:th.basename(directory.rstrip("/\\"))
             name = "download"
-    else:
+    else:   name = "download"
         name = url.split("/")[-1] if "/" in url else url
-    
+        name = url.split("/")[-1] if "/" in url else url
     download_tasks[task_id] = {
-        'progress': 0,
+        'progress': 0,k_id] = {
         'cancel_event': Event(),
-        'thread': None,
+        'thread': None, Event(),
         'status': "running",
-        'url': url,
+        'url': url,running",
         'directory': directory,
         'timestamp': time.time(),
-        'name': name,
+        'name': name,time.time(),
         'paused': False,
         'throttle': throttle,
-        'retries': retries
+        'retries': retriesle,
+    }   'retries': retries
     }
-    
     thread = threading.Thread(target=download_task, args=(url, directory, password, task_id))
-    download_tasks[task_id]['thread'] = thread
+    download_tasks[task_id]['thread'] = threadtask, args=(url, directory, password, task_id))
+    thread.start()[task_id]['thread'] = thread
     thread.start()
-    
     return jsonify({"task_id": task_id}), 202
-
+    return jsonify({"task_id": task_id}), 202
 @app.route('/progress/<task_id>', methods=['GET'])
-@requires_auth
+@requires_authrogress/<task_id>', methods=['GET'])
 def progress(task_id):
     task = download_tasks.get(task_id)
-    if not task:
+    if not task:oad_tasks.get(task_id)
         return jsonify({"error": "Invalid task id"}), 404
     return jsonify({"task_id": task_id, "progress": task['progress']})
-
+    return jsonify({"task_id": task_id, "progress": task['progress']})
 @app.route('/cancel/<task_id>', methods=['POST'])
-@requires_auth
+@requires_authancel/<task_id>', methods=['POST'])
 def cancel(task_id):
     task = download_tasks.get(task_id)
-    if not task:
+    if not task:oad_tasks.get(task_id)
         return jsonify({"error": "Invalid task id"}), 404
-    task['cancel_event'].set()
+    task['cancel_event'].set()": "Invalid task id"}), 404
     return jsonify({"task_id": task_id, "status": "cancelled"})
-
+    return jsonify({"task_id": task_id, "status": "cancelled"})
 @app.route('/remove/<task_id>', methods=['POST'])
-@requires_auth
+@requires_authemove/<task_id>', methods=['POST'])
 def remove(task_id):
     if task_id in download_tasks:
         del download_tasks[task_id]
         return jsonify({"message": f"Task {task_id} removed."})
-    else:
+    else:eturn jsonify({"message": f"Task {task_id} removed."})
         return jsonify({"error": "Invalid task id"}), 404
-
+        return jsonify({"error": "Invalid task id"}), 404
 @app.route('/delete/<task_id>', methods=['POST'])
-@requires_auth
+@requires_authelete/<task_id>', methods=['POST'])
 def delete(task_id):
     task = download_tasks.get(task_id)
-    if not task:
+    if not task:oad_tasks.get(task_id)
         return jsonify({"error": "Invalid task id"}), 404
-    out_path = task.get('out_path')
+    out_path = task.get('out_path')nvalid task id"}), 404
     if not out_path or not os.path.exists(out_path):
         # Remove task from global dict if files not exist.
-        download_tasks.pop(task_id, None)
+        download_tasks.pop(task_id, None) files not exist.
         return jsonify({"message": "Files already removed or not found; task removed."})
-    try:
+    try:return jsonify({"message": "Files already removed or not found; task removed."})
         if os.path.isdir(out_path):
             shutil.rmtree(out_path)
-        else:
+        else:hutil.rmtree(out_path)
             os.remove(out_path)
         # Remove the task from tracking.
         download_tasks.pop(task_id, None)
         return jsonify({"message": f"Task {task_id} files deleted and task removed."})
-    except FileNotFoundError:
+    except FileNotFoundError:age": f"Task {task_id} files deleted and task removed."})
         download_tasks.pop(task_id, None)
         return jsonify({"message": "Files already removed; task removed."})
-    except Exception as e:
+    except Exception as e:essage": "Files already removed; task removed."})
         return jsonify({"error": str(e)}), 500
-
+        return jsonify({"error": str(e)}), 500
 # In the index function
 @app.route('/', methods=['GET', 'POST'])
-@requires_auth
-def index():
+@requires_auth, methods=['GET', 'POST'])
+def index():th
     if request.method == 'POST':
         url = request.form.get('url')
         directory = request.form.get('directory')
         password = request.form.get('password')
-        if not url:
+        if not url:URL is required", "danger")
             flash("URL is required", "danger")
             return redirect(url_for('index'))
-        # Instead of starting thread directly, call /start via redirect (or use AJAX)
-        return redirect(url_for('index'))
+        # Instead of starting thread directly, call /start via redirect (or use AJAX)g it
+        return redirect(url_for('index'))ectory')
     # Use BASE_DIR from env with proper default
     base_dir = os.environ.get("BASE_DIR", "/data")
     if not os.path.exists(base_dir):
-        os.makedirs(base_dir)
+        os.makedirs(base_dir)ory=directory, 
     directories = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
     return render_template('index.html', directories=directories)
-
-if __name__ == '__main__':
+    base_dir = os.environ.get("BASE_DIR", "/data")
+if __name__ == '__main__':base_dir):
     # Ensure proper environment variables are set
+    port = get_env_var("PORT", config.get("port", 2355), False, int)os.path.join(base_dir, d))]
+    host = get_env_var("HOST", config.get("host", "0.0.0.0"))ies)
+    debug = get_env_var("DEBUG", config.get("debug", False), False, lambda x: x.lower() == "true")
+    _name__ == '__main__':
+    app.run(host=host, port=port, debug=debug)set
     port = get_env_var("PORT", config.get("port", 2355), False, int)
     host = get_env_var("HOST", config.get("host", "0.0.0.0"))
     debug = get_env_var("DEBUG", config.get("debug", False), False, lambda x: x.lower() == "true")

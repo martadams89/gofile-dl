@@ -151,9 +151,6 @@ class TestGoFile(unittest.TestCase):
         mock_response.iter_content.return_value = [b"x" * 1000]  # 1KB of data
         mock_get.return_value = mock_response
         
-        # Track time to verify throttling
-        start_time = time.time()
-        
         # Run download with very low throttle (10KB/s)
         with patch('time.sleep') as mock_sleep:
             self.gofile.download(
