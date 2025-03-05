@@ -3,9 +3,9 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies with pinned versions
+# Install system dependencies without specific versions to avoid compatibility issues
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc=4:12.2.0-3 python3-dev=3.11.2-1+b1 curl=7.88.1-10+deb12u5 && \
+    apt-get install -y --no-install-recommends gcc python3-dev curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
