@@ -4,9 +4,9 @@
 # Skip the following security checks (by ID)
 skips:
   # Binding to 0.0.0.0 is necessary for container environments
-  - B104  # Binding to all interfaces
+  - B104 # Binding to all interfaces
   # Empty string check is not actually a hardcoded password
-  - B105  # Hardcoded password string
+  - B105 # Hardcoded password string
 
 # Set the confidence level for reporting
 confidence_level: medium
