@@ -57,18 +57,24 @@ class TestFlaskAppExtended(unittest.TestCase):
     def test_index_route(self):
         """Test the index route with GET and POST methods"""
         # Test GET
-        response = self.client.get('/')
+        response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         
         # Test POST with valid data
-        with patch('app.redirect') as mock_redirect:
-            response = self.client.post('/', data={
-                'url': 'https://gofile.io/d/test',
-                'directory': self.temp_dir,
-                'password': 'testpass'
-            })
-            # Should redirect to start_download
-            self.assertEqual(response.status_code, 302)
+        # We don't need to mock redirect because the Flask test client handles it
+        response = self.client.post(
+            "/",
+            data={
+                "url": "https://gofile.io/d/test",
+                "directory": self.temp_dir,
+                "password": "testpass",
+            },
+            follow_redirects=False  # Don't follow redirect to check the status
+        )
+        # Should redirect to start_download
+        self.assertEqual(response.status_code, 302)  # Redirect status
+        # Optionally verify the redirect location
+        self.assertIn('/start', response.location)
 
     def test_cancel_remove_delete_endpoints(self):
         """Test task management endpoints"""

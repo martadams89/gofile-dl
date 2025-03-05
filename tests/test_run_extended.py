@@ -182,6 +182,7 @@ class TestGoFileExtended(unittest.TestCase):
                 }
             }
             
+            # Use the mock but also verify it - fixes the linting error
             with patch.object(self.gofile, 'download') as mock_download:
                 # Call execute with URL
                 self.gofile.execute(
@@ -192,3 +193,8 @@ class TestGoFileExtended(unittest.TestCase):
                 # Verify content_id was extracted and used
                 mock_extract.assert_called_with("https://gofile.io/d/abc123")
                 mock_get_content.assert_called_with("abc123", None)
+                
+                # Verify download was called with the right parameters
+                mock_download.assert_called_once()
+                args = mock_download.call_args[0]
+                self.assertEqual(args[0], "https://example.com/download/test_file.txt")
