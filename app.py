@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response
 import os
 import threading, uuid
 from threading import Event
@@ -55,7 +55,7 @@ CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.yml")
 DEFAULT_CONFIG = {
     "port": 2355,
     "host": "0.0.0.0",
-    "base_dir": "/app",
+    "base_dir": "/",
     "secret_key": secrets.token_hex(16),
     "default_retries": 3,
     "retry_delay": 5,
@@ -85,14 +85,27 @@ except (FileNotFoundError, yaml.YAMLError):
     except:
         pass  # Fail silently if can't write default config
 
-# Override with environment variables if present
+# Ensure config structure matches our expected schema by providing defaults
+# for any missing keys
+if "auth" not in config:
+    config["auth"] = DEFAULT_CONFIG["auth"]
+elif not isinstance(config["auth"], dict):
+    config["auth"] = DEFAULT_CONFIG["auth"]
+    
+if "csrf" not in config:
+    config["csrf"] = DEFAULT_CONFIG["csrf"]
+    
+# Now safely override with environment variables if present
 config["port"] = get_env_var("PORT", config["port"], False, int)
 config["host"] = get_env_var("HOST", config["host"])
 config["base_dir"] = get_env_var("BASE_DIR", config["base_dir"])
 config["secret_key"] = get_env_var("SECRET_KEY", config["secret_key"])
-config["auth"]["enabled"] = get_env_var("AUTH_ENABLED", config["auth"]["enabled"], False, lambda x: x.lower() == "true")
-config["auth"]["username"] = get_env_var("AUTH_USERNAME", config["auth"]["username"])
-config["auth"]["password"] = get_env_var("AUTH_PASSWORD", config["auth"]["password"])
+
+# Safe access to nested config values
+auth_enabled = config["auth"].get("enabled", DEFAULT_CONFIG["auth"]["enabled"])
+config["auth"]["enabled"] = get_env_var("AUTH_ENABLED", auth_enabled, False, lambda x: x.lower() == "true")
+config["auth"]["username"] = get_env_var("AUTH_USERNAME", config["auth"].get("username", DEFAULT_CONFIG["auth"]["username"]))
+config["auth"]["password"] = get_env_var("AUTH_PASSWORD", config["auth"].get("password", DEFAULT_CONFIG["auth"]["password"]))
 
 app = Flask(__name__)
 app.secret_key = config["secret_key"]
@@ -135,28 +148,37 @@ def requires_auth(f):
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for monitoring"""
-    # Collect basic system information
-    system_info = {
-        'system': platform.system(),
-        'python_version': platform.python_version(),
-        'cpu_usage': psutil.cpu_percent(interval=0.1),
-        'memory': {
-            'total': psutil.virtual_memory().total,
-            'available': psutil.virtual_memory().available,
-            'percent': psutil.virtual_memory().percent,
-        },
-        'disk': {
-            'total': psutil.disk_usage('/').total,
-            'free': psutil.disk_usage('/').free,
-            'percent': psutil.disk_usage('/').percent,
+    try:
+        import psutil
+        # Collect basic system information
+        system_info = {
+            'system': platform.system(),
+            'python_version': platform.python_version(),
+            'cpu_usage': psutil.cpu_percent(interval=0.1),
+            'memory': {
+                'total': psutil.virtual_memory().total,
+                'available': psutil.virtual_memory().available,
+                'percent': psutil.virtual_memory().percent,
+            },
+            'disk': {
+                'total': psutil.disk_usage('/').total,
+                'free': psutil.disk_usage('/').free,
+                'percent': psutil.disk_usage('/').percent,
+            }
         }
-    }
+    except ImportError:
+        # Fallback if psutil is not available
+        system_info = {
+            'system': platform.system(),
+            'python_version': platform.python_version(),
+            'note': 'Extended system metrics unavailable - psutil not installed'
+        }
     
     # Application status
     app_info = {
         'status': 'healthy',
         'active_tasks': sum(1 for task in download_tasks.values() 
-                           if task.get('status') == 'running' or task.get('status') == 'paused'),
+                          if task.get('status') == 'running' or task.get('status') == 'paused'),
         'version': '1.0.0',  # Should be dynamically determined in production
     }
     
@@ -274,31 +296,24 @@ def pause(task_id):
         "status": status
     })
 
-def secure_path(base, target):
-    # Ensure target is within base
-    base = os.path.abspath(base)
-    target = os.path.abspath(target)
-    if os.path.commonpath([base, target]) != base:
-        return base
-    return target
-
 @app.route('/browse', methods=['GET'])
 @requires_auth
 def browse():
-    # Instead of restricting to a base directory, default BASE_DIR to "/" for full filesystem browsing
+    # Allow browsing from BASE_DIR or fully override to "/"
     base_dir = os.environ.get("BASE_DIR", "/")
     rel_path = request.args.get("path", "")
-    if rel_path.strip() == "/":
-        rel_path = ""
-    # Remove secure_path restriction – allow navigating anywhere
     target_dir = os.path.join(base_dir, rel_path)
+
+    # Only check directory existence, no further restrictions
     if not os.path.isdir(target_dir):
         return jsonify({"error": "Invalid path"}), 400
+
     dirs = []
     for item in os.listdir(target_dir):
         fullpath = os.path.join(target_dir, item)
         if os.path.isdir(fullpath):
             dirs.append(item)
+
     return jsonify({"directories": dirs, "current": os.path.abspath(target_dir)})
 
 @app.route('/start', methods=['POST'])
@@ -402,6 +417,7 @@ def delete(task_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# In the index function
 @app.route('/', methods=['GET', 'POST'])
 @requires_auth
 def index():
@@ -414,8 +430,8 @@ def index():
             return redirect(url_for('index'))
         # Instead of starting thread directly, call /start via redirect (or use AJAX)
         return redirect(url_for('index'))
-    # Use BASE_DIR from env, default to container's /app
-    base_dir = os.environ.get("BASE_DIR", "/app")
+    # Use BASE_DIR from env with proper default
+    base_dir = os.environ.get("BASE_DIR", "/data")
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
     directories = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]

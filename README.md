@@ -46,7 +46,6 @@ A powerful, modern web application and CLI tool for downloading files and folder
 ## Quick Start
 
 ### Using Docker (Recommended)
-```
 
 ## Docker Deployment Guide
 
@@ -74,11 +73,8 @@ version: "3.8"
 
 services:
   gofile-dl:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    # Alternatively, use the pre-built image:
-    # image: martadams89/gofile-dl:latest
+    image: martadams89/gofile-dl:latest
+    container_name: gofile-dl
     ports:
       - "2355:2355"
     volumes:
@@ -154,7 +150,7 @@ services:
   gofile-dl:
     image: martadams89/gofile-dl:latest
     volumes:
-      - gofile_data:/data
+      - ./downloads:/data
     environment:
       - AUTH_ENABLED=true
       - AUTH_USERNAME=admin
@@ -171,9 +167,6 @@ services:
 networks:
   proxy:
     external: true
-
-volumes:
-  gofile_data:
 ```
 
 #### Resource-Limited Configuration
@@ -185,7 +178,7 @@ services:
   gofile-dl:
     image: martadams89/gofile-dl:latest
     volumes:
-      - gofile_data:/data
+      - ./downloads:/data
     environment:
       - PORT=2355
     deploy:
@@ -197,9 +190,6 @@ services:
           cpus: '0.25'
           memory: 128M
     restart: unless-stopped
-
-volumes:
-  gofile_data:
 ```
 
 ### Health Check and Monitoring
@@ -256,3 +246,87 @@ Example health check response:
    - Ensure AUTH_ENABLED is set to "true" (case-sensitive)
    - Verify username and password are correctly set
    - Clear browser cache and cookies
+
+# GoFile Downloader
+
+## Overview
+This application downloads files from GoFile.io, provides a web interface for managing downloads, and can browse the entire filesystem if configured.
+
+## Running with Docker Compose
+By default, Docker Compose will:
+- Map HTTP port 2355 to the host.
+- Mount a local "downloads" folder to "/downloads" inside the container.
+
+To start:
+```bash
+docker-compose up -d
+```
+
+The environment variable BASE_DIR defaults to "/downloads". If you need to browse your entire server filesystem, set:
+```bash
+BASE_DIR=/
+```
+inside docker-compose.yml or your .env file.
+
+Downloads will be saved to the "downloads" directory on your host.
+
+## Configuration
+Environment variables:
+- PORT (default: 2355)
+- HOST (default: 0.0.0.0)
+- BASE_DIR (default: /downloads)
+- SECRET_KEY
+- AUTH_ENABLED, AUTH_USERNAME, AUTH_PASSWORD
+
+For more options, see app.py and docker-compose.yml.
+
+## Security Note
+Browsing the entire filesystem can be a security risk. Use authentication and restricted environment variables when needed in production.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Here's how you can help:
+
+1. **Report bugs**: Open an issue describing the bug and how to reproduce it
+2. **Suggest features**: Open an issue describing the feature and its benefits
+3. **Submit pull requests**: Fork the repository and submit a PR with your changes
+
+Please ensure your code follows existing style conventions and includes appropriate tests.
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/gofile-dl.git
+cd gofile-dl
+
+# Install dependencies for development
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+
+# Run tests
+pytest
+
+# Lint your code
+flake8 .
+black .
+```
+
+## Support  
+Having issues with gofile-dl? Here are some resources:  
+
+- **GitHub Issues**: Use our [issue tracker](https://github.com/martadams89/gofile-dl/issues) for bug reports and feature requests.  
+- **Discussions**: For general questions and community support, use our [GitHub Discussions](https://github.com/martadams89/gofile-dl/discussions).  
+
+## Versioning  
+We use [SemVer](https://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/martadams89/gofile-dl/tags).  
+
+## Acknowledgements  
+- Original concept by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl).  
+- Built with [Flask](https://flask.palletsprojects.com/) and [Bootstrap](https://getbootstrap.com/).  
+- Icons from [Bootstrap Icons](https://icons.getbootstrap.com/).  
+- Thanks to all contributors who have helped this project evolve!  

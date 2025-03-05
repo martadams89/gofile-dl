@@ -2,23 +2,26 @@ version: "3.8"
 
 services:
   gofile-dl:
+    # Use pre-built image by default
+    # image: martadams89/gofile-dl:latest
+    # To build from source instead of using pre-built image, uncomment these lines:
     build:
       context: .
-      dockerfile: Dockerfile
-    # image: martadams89/gofile-dl:latest
+      dockerfile: dockerfile
+    container_name: gofile-dl
     ports:
       - "2355:2355"
     volumes:
-      - gofile_data:/data
+      - ./downloads:/data
     environment:
       - PORT=2355
       - HOST=0.0.0.0
       - BASE_DIR=/data
       - SECRET_KEY=change-this-to-a-random-secret-in-production
-      # Uncomment and set these variables to enable authentication
-      # - AUTH_ENABLED=true
-      # - AUTH_USERNAME=admin
-      # - AUTH_PASSWORD=secure_password_here
+      # Authentication is disabled by default - enable for production
+      - AUTH_ENABLED=true
+      - AUTH_USERNAME=admin
+      - AUTH_PASSWORD=secure_password_here
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:2355/health"]
