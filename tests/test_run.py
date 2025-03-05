@@ -154,6 +154,8 @@ class TestGoFile(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.raise_for_status.return_value = None
         mock_response.headers.get.return_value = "100"
+        
+        # Make sure iter_content actually returns data when called
         mock_response.iter_content.return_value = [b"test data"]
         mock_get.return_value = mock_response
         
@@ -162,8 +164,18 @@ class TestGoFile(unittest.TestCase):
         
         # Verify file was created with correct content
         self.assertTrue(os.path.exists(test_file))
-        with open(test_file, 'rb') as f:
-            self.assertEqual(f.read(), b"test data")
+        
+        # Check file content
+        with open(test_file, "rb") as f:
+            content = f.read()
+            self.assertEqual(content, b"test data")
+        
+        # Verify mock was called with correct parameters
+        expected_headers = {'Cookie': f'accountToken={self.gofile.token}', 'Range': 'bytes=0-'}
+        mock_get.assert_called_once_with('https://example.com/test.txt', 
+                                         headers=expected_headers, 
+                                         stream=True, 
+                                         timeout=10)
 
     @patch('requests.get')
     @patch('time.sleep', return_value=None)  # Don't actually sleep in tests
