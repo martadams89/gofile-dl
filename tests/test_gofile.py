@@ -71,7 +71,8 @@ class TestGoFile(unittest.TestCase):
 
         self.gofile.update_wt()
         self.assertEqual(self.gofile.wt, "test_wt")
-        mock_get.assert_called_once_with("https://gofile.io/dist/js/global.js")
+        # Update the assertion to include the timeout parameter
+        mock_get.assert_called_once_with("https://gofile.io/dist/js/global.js", timeout=10)
 
     @patch('run.GoFile.update_token')
     @patch('run.GoFile.update_wt')

@@ -112,7 +112,7 @@ class TestGoFile(unittest.TestCase):
         
         content = self.gofile.get_content("abc123")
         self.assertEqual(content["status"], "ok")
-        mock_get.assert_called_once()
+        mock_get.assert_called_once_with(ANY, headers=ANY, timeout=10)
 
     @patch('requests.get')
     def test_get_content_with_password(self, mock_get):
