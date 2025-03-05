@@ -1,0 +1,43 @@
+# Ruff configuration for the project
+
+# Set target version
+target-version = "py311"
+indent-width = 4
+line-length = 100
+
+# Exclude patterns
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+# Properly organize linting rules in the lint section
+[lint]
+select = ["E", "F", "B", "W"]
+ignore = ["E501", "W293", "W291"]  # Ignore line too long and whitespace in blank lines
+fixable = ["ALL"]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Per-file ignores
+[lint.per-file-ignores]
+"tests/*.py" = ["F401", "F811", "F841", "W293", "W291"]  # More relaxed rules for test files

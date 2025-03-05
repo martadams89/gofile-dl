@@ -8,20 +8,34 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
     <style>
       body {
         /* Changed background URL to a Picsum image */
         background: url("https://picsum.photos/1920/1080") no-repeat center
           center fixed !important;
         background-size: cover !important;
+        transition:
+          background-color 0.3s,
+          color 0.3s;
       }
       .content-wrapper {
         background-color: rgba(255, 255, 255, 0.85);
         padding: 2rem;
         border-radius: 10px;
+        transition:
+          background-color 0.3s,
+          color 0.3s;
+      }
+      .dark-mode {
+        color-scheme: dark;
+        color: #e0e0e0;
       }
       .dark-mode .content-wrapper {
-        background-color: rgba(0, 0, 0, 0.85);
+        background-color: rgba(33, 37, 41, 0.85);
         color: #e0e0e0;
       }
       .logo {
@@ -43,10 +57,72 @@
         background-color: #333;
         border-color: #555;
       }
+      .dashboard-card {
+        transition: transform 0.2s;
+      }
+      .dashboard-card:hover {
+        transform: translateY(-5px);
+      }
+      .category-header {
+        padding: 0.5rem;
+        margin-top: 1rem;
+        border-radius: 0.25rem;
+        font-weight: 500;
+      }
+      .task-file-list {
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      /* Mobile optimizations */
+      @media (max-width: 768px) {
+        .content-wrapper {
+          padding: 1rem;
+        }
+        .btn-group-sm .btn {
+          padding: 0.25rem 0.5rem;
+          font-size: 0.75rem;
+        }
+        .task-controls {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+        .task-controls .btn {
+          flex: 1;
+          min-width: 80px;
+        }
+      }
+      /* File size text styling */
+      .file-size {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-left: 0.5rem;
+      }
+      .dark-mode .file-size {
+        color: #adb5bd;
+      }
+      .task-badge {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+      }
+      #stats-dashboard {
+        margin-bottom: 2rem;
+      }
+      /* Fix task badge position - move to top-right but not overlapping buttons */
+      .task-badge {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+      }
+      /* Add margin to card title container to ensure it doesn't overlap with badge */
+      .card-header-flex {
+        margin-right: 70px; /* Make space for the badge */
+      }
     </style>
   </head>
-  <body class="p-4">
-    <div class="container content-wrapper">
+  <body>
+    <div class="container content-wrapper my-4">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="d-flex align-items-center">
           <!-- Updated header: GoFile logo with downloader text next to it -->
@@ -59,29 +135,63 @@
         </div>
         <!-- Dark/Light Mode Toggle -->
         <button id="mode-toggle" class="btn btn-outline-secondary">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            fill="currentColor"
-            class="bi bi-brightness-high"
-            viewBox="0 0 16 16"
-          >
-            <path
-              d="M8 4.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm0 1a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z"
-            />
-            <path
-              d="M8 0a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0v-1a.5.5 0 0 1 .5-.5zm7-5a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1 0-1h1a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5H1a.5.5 0 0 1 0-1h1.5A.5.5 0 0 1 3 8zm9.657-4.657a.5.5 0 1 1-.707.707l-.708-.707a.5.5 0 1 1 .708-.708l.707.708zm-8.485 8.485a.5.5 0 1 1-.707.707l-.707-.707a.5.5 0 1 1 .707-.707l.707.707zm8.485 0l.707.707a.5.5 0 0 1-.707.707l-.707-.707a.5.5 0 0 1 .707-.707zm-8.485-8.485l.707.707a.5.5 0 1 1-.707.707l-.707-.707a.5.5 0 1 1 .707-.707z"
-            />
-          </svg>
-          Toggle Mode
+          <i class="bi bi-brightness-high me-1"></i>
+          <span id="mode-text">Toggle Mode</span>
         </button>
       </div>
       {% with messages = get_flashed_messages(with_categories=true) %} {% if
       messages %} {% for category, message in messages %}
       <div class="alert alert-{{ category }}">{{ message }}</div>
       {% endfor %} {% endif %} {% endwith %}
+      <!-- Filter Controls -->
+      <!-- Dashboard with Statistics -->
+      <div id="stats-dashboard" class="mb-4">
+        <h3 class="mb-3">Dashboard</h3>
+        <div class="row g-3">
+          <div class="col-md-3 col-6">
+            <div class="card bg-primary text-white dashboard-card h-100">
+              <div class="card-body">
+                <h5 class="card-title">
+                  <i class="bi bi-cloud-download me-2"></i>Total
+                </h5>
+                <p class="card-text display-6" id="stats-total">0</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="card bg-success text-white dashboard-card h-100">
+              <div class="card-body">
+                <h5 class="card-title">
+                  <i class="bi bi-check-circle me-2"></i>Completed
+                </h5>
+                <p class="card-text display-6" id="stats-completed">0</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="card bg-warning text-dark dashboard-card h-100">
+              <div class="card-body">
+                <h5 class="card-title">
+                  <i class="bi bi-hourglass-split me-2"></i>Active
+                </h5>
+                <p class="card-text display-6" id="stats-active">0</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="card bg-danger text-white dashboard-card h-100">
+              <div class="card-body">
+                <h5 class="card-title">
+                  <i class="bi bi-exclamation-triangle me-2"></i>Errors
+                </h5>
+                <p class="card-text display-6" id="stats-errors">0</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <form id="download-form" class="mb-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <div class="mb-3">
           <label for="url" class="form-label">GoFile URL</label>
           <input
@@ -93,58 +203,114 @@
             required
           />
         </div>
-        <div class="mb-3">
-          <label for="directory" class="form-label">Download Directory</label>
-          <div class="input-group">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="directory" class="form-label">Download Directory</label>
+            <div class="input-group">
+              <input
+                type="text"
+                class="form-control"
+                id="directory"
+                name="directory"
+                placeholder="/app"
+              />
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                data-bs-toggle="modal"
+                data-bs-target="#directoryModal"
+              >
+                Browse
+              </button>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="password" class="form-label">Password (if any)</label>
             <input
               type="text"
               class="form-control"
-              id="directory"
-              name="directory"
-              placeholder="/app"
+              id="password"
+              name="password"
+              placeholder="Password"
             />
-            <button
-              type="button"
-              class="btn btn-outline-secondary"
-              data-bs-toggle="modal"
-              data-bs-target="#directoryModal"
-            >
-              Browse
-            </button>
           </div>
         </div>
-        <div class="mb-3">
-          <label for="password" class="form-label">Password (if any)</label>
-          <input
-            type="text"
-            class="form-control"
-            id="password"
-            name="password"
-            placeholder="Password"
-          />
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label for="throttle" class="form-label"
+              >Download Speed Limit (KB/s)</label
+            >
+            <input
+              type="number"
+              class="form-control"
+              id="throttle"
+              name="throttle"
+              placeholder="Unlimited"
+              min="0"
+              step="100"
+            />
+            <div class="form-text">Leave empty for unlimited speed</div>
+          </div>
+          <div class="col-md-6">
+            <label for="retries" class="form-label">Retry Attempts</label>
+            <input
+              type="number"
+              class="form-control"
+              id="retries"
+              name="retries"
+              value="3"
+              min="0"
+              max="10"
+            />
+            <div class="form-text">
+              Number of retry attempts on failure (0-10)
+            </div>
+          </div>
         </div>
-        <button type="submit" class="btn btn-primary">Start Download</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-cloud-download me-1"></i> Start Download
+        </button>
       </form>
-
-      <!-- Filter Controls -->
-      <div class="mb-3">
-        <label for="filter-select" class="form-label"
-          >Show tasks older than:</label
-        >
-        <select
-          id="filter-select"
-          class="form-select"
-          style="width: auto; display: inline-block"
-        >
-          <option value="0">All</option>
-          <option value="1">1 day</option>
-          <option value="7">7 days</option>
-          <option value="30">30 days</option>
-          <option value="180">180 days</option>
-          <option value="365">365 days</option>
-        </select>
+      <!-- Controls for Tasks -->
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <!-- Filter Controls -->
+          <div class="d-flex align-items-center mb-2">
+            <label for="filter-select" class="form-label me-2 mb-0"
+              >Show tasks older than:</label
+            >
+            <select
+              id="filter-select"
+              class="form-select form-select-sm"
+              style="width: auto"
+            >
+              <option value="0">All</option>
+              <option value="1">1 day</option>
+              <option value="7">7 days</option>
+              <option value="30">30 days</option>
+              <option value="180">180 days</option>
+              <option value="365">365 days</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <!-- Group/Sort Controls -->
+          <div class="d-flex align-items-center mb-2">
+            <label for="group-select" class="form-label me-2 mb-0"
+              >Group by:</label
+            >
+            <select
+              id="group-select"
+              class="form-select form-select-sm"
+              style="width: auto"
+            >
+              <option value="none">None</option>
+              <option value="status">Status</option>
+              <option value="date">Date</option>
+            </select>
+          </div>
+        </div>
       </div>
-
       <!-- Tasks Panel -->
       <h2 class="mt-4">Download Tasks</h2>
       <div id="tasks-panel">
@@ -152,13 +318,12 @@
       </div>
     </div>
 
-    <!-- Add a toast container inside the body, for example right after the closing </div> of content-wrapper: -->
+    <!-- Toast container -->
     <div
       id="toast-container"
       class="position-fixed bottom-0 end-0 p-3"
       style="z-index: 1055"
     ></div>
-
     <!-- Updated Modal: Directory Browsing -->
     <div
       class="modal fade"
@@ -219,11 +384,34 @@
         </div>
       </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
       let currentPath = "";
-
+      // Initialize theme from localStorage or default to light
+      document.addEventListener("DOMContentLoaded", function () {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+          document.documentElement.setAttribute("data-bs-theme", "dark");
+          document.body.classList.add("dark-mode");
+          document.getElementById("mode-text").textContent = "Light Mode";
+        } else {
+          document.documentElement.setAttribute("data-bs-theme", "light");
+          document.getElementById("mode-text").textContent = "Dark Mode";
+        }
+      });
+      // Update theme toggle to save preference
+      document.getElementById("mode-toggle").addEventListener("click", () => {
+        const isDarkMode = document.body.classList.toggle("dark-mode");
+        if (isDarkMode) {
+          document.documentElement.setAttribute("data-bs-theme", "dark");
+          document.getElementById("mode-text").textContent = "Light Mode";
+          localStorage.setItem("theme", "dark");
+        } else {
+          document.documentElement.setAttribute("data-bs-theme", "light");
+          document.getElementById("mode-text").textContent = "Dark Mode";
+          localStorage.setItem("theme", "light");
+        }
+      });
       function loadDirectories(path = "") {
         fetch("/browse?path=" + encodeURIComponent(path))
           .then((response) => response.json())
@@ -251,26 +439,24 @@
               li.className = "list-group-item";
               li.style.cursor = "pointer";
               li.textContent = dir;
-              li.onclick = () =>
+              li.onclick = () => {
                 loadDirectories(currentPath ? currentPath + "/" + dir : dir);
+              };
               ul.appendChild(li);
             });
             tree.appendChild(ul);
           });
       }
-
       // Modal: load file tree when opened
       const directoryModal = document.getElementById("directoryModal");
       directoryModal.addEventListener("shown.bs.modal", () => {
         loadDirectories("");
       });
-
       // Manual path load button
       document.getElementById("load-manual").addEventListener("click", () => {
         const manualPath = document.getElementById("manual-path").value;
         loadDirectories(manualPath);
       });
-
       // On modal select, set the chosen directory into input field
       document.getElementById("select-dir").addEventListener("click", () => {
         document.getElementById("directory").value = currentPath
@@ -281,12 +467,14 @@
         );
         modal.hide();
       });
-
-      // Toggle dark/light mode
-      document.getElementById("mode-toggle").addEventListener("click", () => {
-        document.body.classList.toggle("dark-mode");
-      });
-
+      // Format file size in a human-readable format
+      function formatFileSize(bytes) {
+        if (bytes === 0 || bytes === undefined || bytes === null)
+          return "Unknown";
+        const sizes = ["B", "KB", "MB", "GB", "TB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return (bytes / Math.pow(1024, i)).toFixed(2) + " " + sizes[i];
+      }
       // Toast notification function (ensure a toast container exists in your body)
       function showToast(message, type = "info") {
         const container = document.getElementById("toast-container");
@@ -308,8 +496,7 @@
           container.removeChild(toast),
         );
       }
-
-      // Update form submission to use a non-blocking toast notification
+      // Form submission via AJAX
       document
         .getElementById("download-form")
         .addEventListener("submit", function (event) {
@@ -318,6 +505,9 @@
           fetch("/start", {
             method: "POST",
             body: formData,
+            headers: {
+              "X-CSRFToken": getCSRFToken(),
+            },
           })
             .then((response) => response.json())
             .then((data) => {
@@ -332,104 +522,323 @@
               }
             });
         });
-
       // Get current filter in days (0 means all)
       function getFilterDays() {
         return parseInt(document.getElementById("filter-select").value);
       }
-
-      // Polling function to update tasks panel every 3 seconds
+      // Get current grouping option
+      function getGroupOption() {
+        return document.getElementById("group-select").value;
+      }
+      // Update dashboard statistics
+      function updateDashboard(tasks) {
+        const stats = {
+          total: Object.keys(tasks).length,
+          completed: 0,
+          active: 0,
+          errors: 0,
+        };
+        for (const taskId in tasks) {
+          const task = tasks[taskId];
+          if (task.status === "completed") stats.completed++;
+          else if (task.status === "error") stats.errors++;
+          else stats.active++; // running, paused, etc.
+        }
+        document.getElementById("stats-total").textContent = stats.total;
+        document.getElementById("stats-completed").textContent =
+          stats.completed;
+        document.getElementById("stats-active").textContent = stats.active;
+        document.getElementById("stats-errors").textContent = stats.errors;
+      }
+      // Polling function to update tasks panel
       function loadTasks() {
         fetch("/tasks")
           .then((response) => response.json())
-          .then((tasks) => {
+          .then((tasksData) => {
+            // Update dashboard
+            updateDashboard(tasksData);
             const panel = document.getElementById("tasks-panel");
             panel.innerHTML = "";
             const now = Date.now() / 1000; // seconds
             const filterDays = getFilterDays();
-            for (const [taskId, info] of Object.entries(tasks)) {
-              // If filter is applied, skip tasks newer than threshold
-              if (filterDays > 0 && now - info.timestamp < filterDays * 86400) {
-                continue;
+            const groupOption = getGroupOption();
+            // Filter tasks
+            let filteredTasks = Object.entries(tasksData).filter(
+              ([_, info]) => {
+                return (
+                  filterDays === 0 || now - info.timestamp < filterDays * 86400
+                );
+              },
+            );
+            // If grouping is enabled
+            if (groupOption !== "none") {
+              // Create groups
+              const groupedTasks = {};
+              if (groupOption === "status") {
+                // Group by status (active, paused, completed, error)
+                filteredTasks.forEach(([taskId, info]) => {
+                  const status = info.status || "unknown";
+                  if (!groupedTasks[status]) {
+                    groupedTasks[status] = [];
+                  }
+                  groupedTasks[status].push([taskId, info]);
+                });
+                // Define display order
+                const statusOrder = [
+                  "running",
+                  "paused",
+                  "completed",
+                  "error",
+                  "cancelled",
+                  "unknown",
+                ];
+                const statusLabels = {
+                  running: "Active",
+                  paused: "Paused",
+                  completed: "Completed",
+                  error: "Error",
+                  cancelled: "Cancelled",
+                  unknown: "Unknown",
+                };
+                // Display each group
+                statusOrder.forEach((status) => {
+                  if (groupedTasks[status] && groupedTasks[status].length > 0) {
+                    // Add group header
+                    const headerStyle = {
+                      running: "bg-warning text-dark",
+                      paused: "bg-info text-dark",
+                      completed: "bg-success text-white",
+                      error: "bg-danger text-white",
+                      cancelled: "bg-secondary text-white",
+                      unknown: "bg-light text-dark",
+                    };
+                    const header = document.createElement("div");
+                    header.className = `category-header ${headerStyle[status] || "bg-light"}`;
+                    header.innerHTML = `<i class="bi bi-collection me-2"></i>${statusLabels[status]} Tasks (${groupedTasks[status].length})`;
+                    panel.appendChild(header);
+                    // Add tasks in this group
+                    groupedTasks[status].forEach(([taskId, info]) => {
+                      panel.appendChild(createTaskCard(taskId, info));
+                    });
+                  }
+                });
+              } else if (groupOption === "date") {
+                // Group by date (today, yesterday, this week, older)
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const thisWeek = new Date(today);
+                thisWeek.setDate(thisWeek.getDate() - 7);
+                const dateGroups = {
+                  today: [],
+                  yesterday: [],
+                  thisWeek: [],
+                  older: [],
+                };
+                filteredTasks.forEach(([taskId, info]) => {
+                  const taskDate = new Date(info.timestamp * 1000);
+                  if (taskDate >= today) {
+                    dateGroups.today.push([taskId, info]);
+                  } else if (taskDate >= yesterday) {
+                    dateGroups.yesterday.push([taskId, info]);
+                  } else if (taskDate >= thisWeek) {
+                    dateGroups.thisWeek.push([taskId, info]);
+                  } else {
+                    dateGroups.older.push([taskId, info]);
+                  }
+                });
+                // Display date groups
+                const dateGroupOrder = [
+                  "today",
+                  "yesterday",
+                  "thisWeek",
+                  "older",
+                ];
+                const dateLabels = {
+                  today: "Today",
+                  yesterday: "Yesterday",
+                  thisWeek: "This Week",
+                  older: "Older",
+                };
+                dateGroupOrder.forEach((dateGroup) => {
+                  if (dateGroups[dateGroup].length > 0) {
+                    const header = document.createElement("div");
+                    header.className = "category-header bg-light";
+                    header.innerHTML = `<i class="bi bi-calendar-event me-2"></i>${dateLabels[dateGroup]} (${dateGroups[dateGroup].length})`;
+                    panel.appendChild(header);
+                    dateGroups[dateGroup].forEach(([taskId, info]) => {
+                      panel.appendChild(createTaskCard(taskId, info));
+                    });
+                  }
+                });
               }
-              const card = document.createElement("div");
-              card.className = "card mb-2";
-              const body = document.createElement("div");
-              body.className = "card-body";
-              // Format timestamp to readable date
-              const date = new Date(info.timestamp * 1000).toLocaleString();
-              const isPaused = info.paused;
-              const pauseButtonText = isPaused ? "Resume" : "Pause";
-
-              body.innerHTML = `<div class="d-flex justify-content-between">
-                            <h5 class="card-title">${info.name}</h5>
-                            <div>
-                              <button class="btn btn-sm btn-secondary me-1" onclick="removeTask('${taskId}')">X</button>
-                              <button class="btn btn-sm btn-danger" onclick="deleteTask('${taskId}')">Delete</button>
-                            </div>
-                        </div>
-                        <p class="card-text">URL: ${info.url}<br>Started: ${date}</p>
-                        <p>Status: <span id="status-${taskId}">${info.status}</span></p>
-                        <p>Overall Progress: <span id="overall-${taskId}">${info.overall_progress || 0}%</span> 
-                           | ETA: <span id="eta-${taskId}">${info.eta || "N/A"}</span></p>
-                        <div class="progress mb-2">
-                          <div id="progress-${taskId}" class="progress-bar" role="progressbar" style="width: ${info.progress}%;">${info.progress}%</div>
-                        </div>
-                        ${info.files
-                          .map(
-                            (f) => `
-                           <div class="ms-3 mb-1">
-                             <strong>${f.file.split("/").pop()}</strong>: <span>${f.progress}%</span>
-                             <div class="progress" style="height: 5px;">
-                               <div class="progress-bar" role="progressbar" style="width: ${f.progress}%"></div>
-                             </div>
-                           </div>
-                        `,
-                          )
-                          .join("")}
-                        <button class="btn btn-warning btn-sm me-2" onclick="pauseTask('${taskId}')">${pauseButtonText}</button>
-                        <button class="btn btn-danger btn-sm" onclick="cancelTask('${taskId}')">Cancel</button>`;
-              card.appendChild(body);
-              panel.appendChild(card);
+            } else {
+              // No grouping, just display all tasks
+              filteredTasks.forEach(([taskId, info]) => {
+                panel.appendChild(createTaskCard(taskId, info));
+              });
+            }
+            // If no tasks to display
+            if (filteredTasks.length === 0) {
+              const emptyState = document.createElement("div");
+              emptyState.className = "text-center p-5 text-muted";
+              emptyState.innerHTML = `
+                <i class="bi bi-inbox display-1"></i>
+                <p class="mt-3">No tasks to display.</p>
+              `;
+              panel.appendChild(emptyState);
             }
           });
       }
-
-      // Poll tasks every 3 seconds and when filter changes
+      // Create a task card element
+      function createTaskCard(taskId, info) {
+        const card = document.createElement("div");
+        card.className = "card mb-3";
+        // Set different background color based on status
+        if (info.status === "completed") {
+          card.classList.add("border-success");
+        } else if (info.status === "error") {
+          card.classList.add("border-danger");
+        } else if (info.status === "paused") {
+          card.classList.add("border-info");
+        }
+        // Add status badge
+        const statusBadgeClass = {
+          completed: "bg-success",
+          error: "bg-danger",
+          running: "bg-warning text-dark",
+          paused: "bg-info",
+          cancelled: "bg-secondary",
+        };
+        const body = document.createElement("div");
+        body.className = "card-body position-relative";
+        // Format timestamp to readable date
+        const date = new Date(info.timestamp * 1000).toLocaleString();
+        const isPaused = info.paused;
+        const pauseButtonText = isPaused ? "Resume" : "Pause";
+        // Status badge
+        const badgeHTML = `<span class="badge ${statusBadgeClass[info.status] || "bg-secondary"} task-badge">${info.status}</span>`;
+        // Calculate total file size if available
+        let totalSize = 0;
+        if (info.files && info.files.length > 0) {
+          info.files.forEach((f) => {
+            if (f.size) totalSize += f.size;
+          });
+        }
+        const sizeDisplay =
+          totalSize > 0
+            ? `<small class="text-muted ms-2">(${formatFileSize(totalSize)})</small>`
+            : "";
+        body.innerHTML = `
+          ${badgeHTML}
+          <div class="d-flex justify-content-between card-header-flex">
+            <h5 class="card-title">${info.name} ${sizeDisplay}</h5>
+            <div>
+              <button class="btn btn-sm btn-secondary me-1" onclick="removeTask('${taskId}')">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="deleteTask('${taskId}')">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+          <p class="card-text">
+            <small class="text-muted">URL: ${info.url}</small><br/>
+            <small class="text-muted">Started: ${date}</small>
+          </p>
+          <p>Status: <span id="status-${taskId}" class="fw-bold">${info.status}</span></p>
+          <p>Overall Progress: <span id="overall-${taskId}" class="fw-bold">${info.overall_progress || 0}%</span>
+              | ETA: <span id="eta-${taskId}">${info.eta || "N/A"}</span></p>
+          <div class="progress mb-3">
+            <div id="progress-${taskId}" class="progress-bar" role="progressbar"
+                  style="width: ${info.progress}%;" aria-valuenow="${info.progress}"
+                  aria-valuemin="0" aria-valuemax="100">${info.progress}%</div>
+          </div>`;
+        // Show files only if present
+        if (info.files && info.files.length > 0) {
+          const filesList = document.createElement("div");
+          filesList.className = "task-file-list mb-3";
+          info.files.forEach((f) => {
+            const fileSize = f.size
+              ? ` <span class="file-size">${formatFileSize(f.size)}</span>`
+              : "";
+            filesList.innerHTML += `
+              <div class="ms-3 mb-1">
+                <i class="bi bi-file-earmark me-1"></i>
+                <strong>${f.file.split("/").pop()}</strong>: 
+                <span>${f.progress}%</span>${fileSize}
+                <div class="progress" style="height: 5px;">
+                  <div class="progress-bar" role="progressbar" style="width: ${f.progress}%"></div>
+                </div>
+              </div>
+            `;
+          });
+          body.appendChild(filesList);
+        }
+        // Controls section
+        const controls = document.createElement("div");
+        controls.className = "task-controls";
+        controls.innerHTML = `
+          <button class="btn btn-warning btn-sm me-2" onclick="pauseTask('${taskId}')">
+            <i class="bi bi-${isPaused ? "play" : "pause"} me-1"></i>${pauseButtonText}
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="cancelTask('${taskId}')">
+            <i class="bi bi-x-circle me-1"></i>Cancel
+          </button>
+        `;
+        body.appendChild(controls);
+        card.appendChild(body);
+        return card;
+      }
+      // Poll tasks every 3 seconds and when controls change
       setInterval(loadTasks, 3000);
       document
         .getElementById("filter-select")
         .addEventListener("change", loadTasks);
+      document
+        .getElementById("group-select")
+        .addEventListener("change", loadTasks);
       loadTasks();
-
-      // Update removeTask, cancelTask and pauseTask functions to use showToast instead of alert.
       function removeTask(taskId) {
-        fetch("/remove/" + taskId, { method: "POST" })
+        fetch("/remove/" + taskId, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCSRFToken(),
+          },
+        })
           .then((response) => response.json())
           .then((data) => {
             showToast(data.message || data.error, "info");
             loadTasks();
           });
       }
-
       function cancelTask(taskId) {
-        fetch("/cancel/" + taskId, { method: "POST" })
+        fetch("/cancel/" + taskId, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCSRFToken(),
+          },
+        })
           .then((response) => response.json())
           .then((data) => {
             showToast("Task " + taskId + " cancelled.", "warning");
             loadTasks();
           });
       }
-
       function pauseTask(taskId) {
-        fetch("/pause/" + taskId, { method: "POST" })
+        fetch("/pause/" + taskId, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCSRFToken(),
+          },
+        })
           .then((response) => response.json())
           .then((data) => {
             const isPaused = data.paused;
             const buttonText = isPaused ? "Resume" : "Pause";
             const buttonStatus =
               data.status || (isPaused ? "paused" : "running");
-
             // Update the button text
             const button = document.querySelector(
               `button[onclick="pauseTask('${taskId}')"]`,
@@ -437,13 +846,11 @@
             if (button) {
               button.textContent = buttonText;
             }
-
             // Update the status text
             const statusSpan = document.getElementById(`status-${taskId}`);
             if (statusSpan) {
               statusSpan.textContent = buttonStatus;
             }
-
             showToast(
               `Task ${taskId} ${isPaused ? "paused" : "resumed"}`,
               "info",
@@ -454,14 +861,18 @@
             showToast("Failed to toggle pause state", "danger");
           });
       }
-
       function deleteTask(taskId) {
         if (
           confirm(
             "Are you sure you want to delete this task's files from disk?",
           )
         ) {
-          fetch("/delete/" + taskId, { method: "POST" })
+          fetch("/delete/" + taskId, {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": getCSRFToken(),
+            },
+          })
             .then((response) => response.json())
             .then((data) => {
               showToast(data.message || data.error, "info");
@@ -469,6 +880,32 @@
             });
         }
       }
+      // Add this function to existing JavaScript
+      function getCSRFToken() {
+        return document.querySelector('input[name="csrf_token"]').value;
+      }
+
+      // Add CSRF header to all AJAX requests
+      document.addEventListener("DOMContentLoaded", function () {
+        // Add CSRF token to all AJAX requests
+        const originalFetch = window.fetch;
+        window.fetch = function (url, options) {
+          options = options || {};
+
+          // Only add the CSRF token for POST, PUT, PATCH and DELETE requests
+          if (
+            options.method &&
+            ["POST", "PUT", "PATCH", "DELETE"].includes(
+              options.method.toUpperCase(),
+            )
+          ) {
+            options.headers = options.headers || {};
+            options.headers["X-CSRFToken"] = getCSRFToken();
+          }
+
+          return originalFetch(url, options);
+        };
+      });
     </script>
   </body>
 </html>
