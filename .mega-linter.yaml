@@ -51,5 +51,5 @@ PYTHON_BANDIT_CONFIG_FILE: .bandit.yml
 DISABLE_LINTERS:
   - COPYPASTE # Disable copy-paste detection
   - SPELL # Disable spell checking
-  - PYTHON_MYPY # Completely disable mypy 
+  - PYTHON_MYPY # Completely disable mypy
   - PYTHON_PYRIGHT # Completely disable pyright
