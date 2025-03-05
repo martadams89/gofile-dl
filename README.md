@@ -129,7 +129,6 @@ docker-compose up -d
 GoFile Downloader uses the following volumes:
 
 - `/data`: Main storage location for downloaded files
-- `/app/config.yml`: (Optional) Mount a custom configuration file
 
 ### Security Best Practices
 
@@ -251,51 +250,6 @@ Example health check response:
    - Ensure AUTH_ENABLED is set to "true" (case-sensitive)
    - Verify username and password are correctly set
    - Clear browser cache and cookies
-
-# GoFile Downloader
-
-## Overview
-
-This application downloads files from GoFile.io, provides a web interface for managing downloads, and can browse the entire filesystem if configured.
-
-## Running with Docker Compose
-
-By default, Docker Compose will:
-
-- Map HTTP port 2355 to the host.
-- Mount a local "downloads" folder to "/downloads" inside the container.
-
-To start:
-
-```bash
-docker-compose up -d
-```
-
-The environment variable BASE_DIR defaults to "/downloads". If you need to browse your entire server filesystem, set:
-
-```bash
-BASE_DIR=/
-```
-
-inside docker-compose.yml or your .env file.
-
-Downloads will be saved to the "downloads" directory on your host.
-
-## Configuration
-
-Environment variables:
-
-- PORT (default: 2355)
-- HOST (default: 0.0.0.0)
-- BASE_DIR (default: /downloads)
-- SECRET_KEY
-- AUTH_ENABLED, AUTH_USERNAME, AUTH_PASSWORD
-
-For more options, see app.py and docker-compose.yml.
-
-## Security Note
-
-Browsing the entire filesystem can be a security risk. Use authentication and restricted environment variables when needed in production.
 
 ## License
 
