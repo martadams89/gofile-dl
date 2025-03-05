@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response
 import os
 import threading, uuid
 from threading import Event
@@ -6,7 +6,7 @@ from run import GoFile
 import time
 import shutil
 import yaml
-from typing import Dict, Any, Optional, List, Union, Callable
+from typing import Dict, Any, Optional, Callable
 from flask_wtf import CSRFProtect
 from functools import wraps
 import secrets

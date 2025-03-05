@@ -5,8 +5,7 @@ from pathvalidate import sanitize_filename
 import requests
 import hashlib
 import time
-import math
-from typing import Dict, List, Any, Optional, Callable, Union, Tuple
+from typing import Dict, Any, Optional, Callable
 
 logging.basicConfig(
     level=logging.INFO,
