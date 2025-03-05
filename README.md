@@ -10,7 +10,6 @@ A powerful, modern web application and CLI tool for downloading files and folder
 
 _Originally inspired by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl) but completely rebuilt with extensive enhancements and a modern architecture._
 
-
 ## Features
 
 ### Core Functionality
