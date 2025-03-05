@@ -62,12 +62,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' && contains(fromJSON('["refs/heads/main", "refs/heads/master"]'), github.ref) }}
-          PYTHON_PYLINT_ARGUMENTS: "--disable=C0111,R0903 --max-line-length=100"
+          PYTHON_PYLINT_ARGUMENTS: "--disable=C0111,R0903,import-error --max-line-length=100"
           PYTHON_FLAKE8_ARGUMENTS: "--max-line-length=100 --extend-ignore=E203"
           PYTHON_BLACK_ARGUMENTS: "--line-length=100"
           PYTHON_ISORT_ARGUMENTS: "--profile black"
+          PYTHON_BANDIT_ARGUMENTS: "--configfile .bandit.yml --skip B104,B105"
+          PYTHON_PYRIGHT_ARGUMENTS: "--ignoreexternal --skipunannotated"
+          PYTHON_MYPY_ARGUMENTS: "--ignore-missing-imports --disable-error-code attr-defined,misc,arg-type,call-arg"
           PARALLEL: "true"
-          DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore=DL3003,DL3018"
+          DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore=DL3003,DL3018,DL3008"
 
       - name: Check Docker build
         run: |

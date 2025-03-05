@@ -1,0 +1,15 @@
+# Bandit configuration file
+# Customize bandit behavior
+
+# Skip the following security checks (by ID)
+skips:
+  # Binding to 0.0.0.0 is necessary for container environments
+  - B104  # Binding to all interfaces
+  # Empty string check is not actually a hardcoded password
+  - B105  # Hardcoded password string
+
+# Set the confidence level for reporting
+confidence_level: medium
+
+# Set the severity level for reporting
+severity_level: medium

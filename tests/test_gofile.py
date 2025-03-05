@@ -126,18 +126,22 @@ class TestGoFile(unittest.TestCase):
         mock_get.side_effect = [mock_response_fail, mock_response_fail, mock_response_success]
         
         # Run download with 3 retries (2 will fail, 3rd will succeed)
-        self.gofile.download(
-            link="https://example.com/test.txt", 
-            file=test_file, 
-            retry_attempts=3
-        )
+        self.gofile.download(link="https://example.com/test.txt", file=test_file, retry_attempts=3)
         
         # Verify retry behavior
         self.assertEqual(mock_get.call_count, 3)
         self.assertEqual(mock_sleep.call_count, 2)  # Sleep called between retries
         
-        # Check if final file exists (would be created on successful download)
+        # Check file was created successfully
         self.assertTrue(os.path.exists(test_file))
+        
+        # Check file content
+        with open(test_file, 'rb') as f:
+            self.assertEqual(f.read(), b"test data")
+        
+        # Verify the response methods were called correctly
+        mock_response_success.headers.get.assert_called_with('Content-Length', '0')
+        mock_response_success.iter_content.assert_called_once()
 
     @patch('requests.get')
     def test_download_with_throttling(self, mock_get):

@@ -1,0 +1,9 @@
+# Hadolint configuration file
+
+# Ignore specific rules
+ignored:
+  # Allow unpinned versions in apt-get install commands
+  - DL3008
+  # We're already ignoring DL3003 and DL3018 in the workflow file, so include them here too
+  - DL3003
+  - DL3018

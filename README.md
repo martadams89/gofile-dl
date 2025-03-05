@@ -335,7 +335,6 @@ black .
 Having issues with gofile-dl? Here are some resources:
 
 - **GitHub Issues**: Use our [issue tracker](https://github.com/martadams89/gofile-dl/issues) for bug reports and feature requests.
-- **Discussions**: For general questions and community support, use our [GitHub Discussions](https://github.com/martadams89/gofile-dl/discussions).
 
 ## Versioning
 

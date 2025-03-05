@@ -1,7 +1,7 @@
 [flake8]
 max-line-length = 100
-extend-ignore = E203, E501
-exclude = .git,__pycache__,build,dist,venv,.venv
+extend-ignore = E203
+# Exclude specific lines if needed
 per-file-ignores =
-    # Allow unused variables in app.py for specific routes
-    app.py:F841
+    # Ignore line too long for specific lines in run.py
+    run.py:140: E501
