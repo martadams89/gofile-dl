@@ -13,6 +13,8 @@ import secrets
 from dotenv import load_dotenv
 import platform
 import psutil
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Load environment variables from .env file if it exists
 load_dotenv()
@@ -118,6 +120,13 @@ app.secret_key = config["secret_key"]
 csrf = CSRFProtect(app)
 csrf.init_app(app)
 
+# Add rate limiting to prevent abuse
+limiter = Limiter(
+    app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
 # Global dict to track download tasks
 download_tasks: Dict[str, Dict[str, Any]] = {}
 
@@ -146,7 +155,14 @@ def requires_auth(f):
         if not auth or not check_auth(auth.username, auth.password):
             return authenticate()
         return f(*args, **kwargs)
-    return decorated
+            db.session.commit()
+    
+    return app
+
+app = create_app()
+
+# Global dict to track download tasks
+download_tasks: Dict[str, Dict[str, Any]] = {}
 
 # Health check endpoint
 @app.route('/health', methods=['GET'])
@@ -264,7 +280,7 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
     download_tasks[task_id]['progress'] = 100
 
 @app.route('/tasks', methods=['GET'])
-@requires_auth
+@login_required
 def tasks():
     return jsonify({
         task_id: {
@@ -282,7 +298,7 @@ def tasks():
     })
 
 @app.route('/pause/<task_id>', methods=['POST'])
-@requires_auth
+@login_required
 def pause(task_id):
     task = download_tasks.get(task_id)
     if not task:
@@ -300,7 +316,7 @@ def pause(task_id):
     })
 
 @app.route('/browse', methods=['GET'])
-@requires_auth
+@login_required
 def browse():
     # Allow browsing from BASE_DIR or fully override to "/"
     base_dir = os.environ.get("BASE_DIR", "/")
@@ -320,7 +336,7 @@ def browse():
     return jsonify({"directories": dirs, "current": os.path.abspath(target_dir)})
 
 @app.route('/start', methods=['POST'])
-@requires_auth
+@login_required
 def start_download():
     url = request.form.get('url')
     directory = request.form.get('directory')
@@ -370,7 +386,7 @@ def start_download():
     return jsonify({"task_id": task_id}), 202
 
 @app.route('/progress/<task_id>', methods=['GET'])
-@requires_auth
+@login_required
 def progress(task_id):
     task = download_tasks.get(task_id)
     if not task:
@@ -378,7 +394,7 @@ def progress(task_id):
     return jsonify({"task_id": task_id, "progress": task['progress']})
 
 @app.route('/cancel/<task_id>', methods=['POST'])
-@requires_auth
+@login_required
 def cancel(task_id):
     task = download_tasks.get(task_id)
     if not task:
@@ -387,7 +403,7 @@ def cancel(task_id):
     return jsonify({"task_id": task_id, "status": "cancelled"})
 
 @app.route('/remove/<task_id>', methods=['POST'])
-@requires_auth
+@login_required
 def remove(task_id):
     if task_id in download_tasks:
         del download_tasks[task_id]
@@ -396,7 +412,7 @@ def remove(task_id):
         return jsonify({"error": "Invalid task id"}), 404
 
 @app.route('/delete/<task_id>', methods=['POST'])
-@requires_auth
+@login_required
 def delete(task_id):
     task = download_tasks.get(task_id)
     if not task:
@@ -420,8 +436,31 @@ def delete(task_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('index'))
+        
+        flash('Invalid username or password', 'danger')
+    
+    response.headers['X-Frame-Options'] = 'DENY'
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 @app.route('/', methods=['GET', 'POST'])
-@requires_auth
+@login_required
 def index():
     if request.method == 'POST':
         url = request.form.get('url')
@@ -441,6 +480,32 @@ def index():
         os.makedirs(base_dir)
     directories = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
     return render_template('index.html', directories=directories)
+
+if __name__ == '__main__':
+    # Ensure proper environment variables are set
+    port = get_env_var("PORT", config.get("port", 2355), False, int)
+    host = get_env_var("HOST", config.get("host", "0.0.0.0"))
+    debug = get_env_var("DEBUG", config.get("debug", False), False, lambda x: x.lower() == "true")
+    
+    app.run(host=host, port=port, debug=debug)
+
+    return render_template('index.html', directories=directories)
+
+if __name__ == '__main__':
+    # Ensure proper environment variables are set
+    port = get_env_var("PORT", config.get("port", 2355), False, int)
+    host = get_env_var("HOST", config.get("host", "0.0.0.0"))
+    debug = get_env_var("DEBUG", config.get("debug", False), False, lambda x: x.lower() == "true")
+    
+    app.run(host=host, port=port, debug=debug)
+
+    # Enable XSS protection
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    # Strict content security policy for modern browsers
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self'"
+    # Referrer policy
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
 
 if __name__ == '__main__':
     # Ensure proper environment variables are set
