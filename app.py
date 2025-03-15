@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response
 import os
-import threading, uuid
+import threading
+import uuid
 from threading import Event
 from run import GoFile
 import time
