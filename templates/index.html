@@ -398,22 +398,22 @@
           document.documentElement.setAttribute("data-bs-theme", "light");
           document.getElementById("mode-text").textContent = "Dark Mode";
         }
-        
+
         // Set directory input from sessionStorage if available
-        const savedPath = sessionStorage.getItem('lastDownloadPath');
+        const savedPath = sessionStorage.getItem("lastDownloadPath");
         if (savedPath) {
           document.getElementById("directory").value = savedPath;
         }
       });
-      
+
       function loadDirectories(path = "") {
         fetch("/browse?path=" + encodeURIComponent(path))
           .then((response) => response.json())
           .then((data) => {
             currentPath = data.current;
             // Store the current path in sessionStorage
-            sessionStorage.setItem('lastDownloadPath', currentPath);
-            
+            sessionStorage.setItem("lastDownloadPath", currentPath);
+
             const tree = document.getElementById("folder-tree");
             tree.innerHTML = "";
             const ul = document.createElement("ul");
@@ -460,8 +460,8 @@
           ? currentPath
           : "";
         // Store the selected path in sessionStorage
-        sessionStorage.setItem('lastDownloadPath', currentPath);
-        
+        sessionStorage.setItem("lastDownloadPath", currentPath);
+
         const modal = bootstrap.Modal.getInstance(
           document.getElementById("directoryModal"),
         );
@@ -502,13 +502,13 @@
         .addEventListener("submit", function (event) {
           event.preventDefault();
           const formData = new FormData(this);
-          
+
           // Save the current directory path to sessionStorage
           const directoryPath = document.getElementById("directory").value;
           if (directoryPath) {
-            sessionStorage.setItem('lastDownloadPath', directoryPath);
+            sessionStorage.setItem("lastDownloadPath", directoryPath);
           }
-          
+
           fetch("/start", {
             method: "POST",
             body: formData,
@@ -916,20 +916,20 @@
     </script>
     <!-- Initialize download path from session storage when form loads -->
     <script>
-      $(document).ready(function() {
-          // Set download path from session storage if available
-          const savedPath = sessionStorage.getItem('lastDownloadPath');
-          if (savedPath) {
-              $('#download_path').val(savedPath);
+      $(document).ready(function () {
+        // Set download path from session storage if available
+        const savedPath = sessionStorage.getItem("lastDownloadPath");
+        if (savedPath) {
+          $("#download_path").val(savedPath);
+        }
+
+        // When the download form is submitted
+        $("#downloadForm").on("submit", function () {
+          const currentPath = $("#download_path").val();
+          if (currentPath) {
+            sessionStorage.setItem("lastDownloadPath", currentPath);
           }
-          
-          // When the download form is submitted
-          $('#downloadForm').on('submit', function() {
-              const currentPath = $('#download_path').val();
-              if (currentPath) {
-                  sessionStorage.setItem('lastDownloadPath', currentPath);
-              }
-          });
+        });
       });
     </script>
   </body>
