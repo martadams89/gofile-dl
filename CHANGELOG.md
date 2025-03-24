@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/martadams89/gofile-dl/compare/v1.2.0...v1.3.0) (2025-03-24)
+
+
+### Features
+
+* implement sessionStorage for saving and loading last download path ([9a1f1c7](https://github.com/martadams89/gofile-dl/commit/9a1f1c7eaeec55d11c5229e034930bf0a5f98350))
+
+
+### Bug Fixes
+
+* Implement sessionStorage for last download path ([646c20e](https://github.com/martadams89/gofile-dl/commit/646c20e3c96e4defe497fe06315fcb6d6e06f59a))
+
 ## [1.2.0](https://github.com/martadams89/gofile-dl/compare/v1.1.0...v1.2.0) (2025-03-15)
 
 ### Features
