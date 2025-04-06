@@ -7,7 +7,7 @@ services:
     # To build from source instead of using pre-built image, uncomment these lines:
     build:
       context: .
-      dockerfile: dockerfile
+      dockerfile: Dockerfile
     container_name: gofile-dl
     ports:
       - "2355:2355"
