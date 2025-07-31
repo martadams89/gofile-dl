@@ -2,7 +2,7 @@
 
 **Note: This project began as a fork of [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl) but has since evolved into a completely rebuilt application with a different architecture and extensive new features.**
 
-![Version](https://img.shields.io/badge/version-1.2.0-blue)
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
 ![Python](https://img.shields.io/badge/python-3.7%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -229,19 +229,16 @@ Example health check response:
 ### Troubleshooting Docker Deployment
 
 1. **Container fails to start**
-
    - Check logs: `docker logs gofile-dl`
    - Verify environment variables are correctly set
    - Ensure the download directory has correct permissions
 
 2. **Cannot access web interface**
-
    - Confirm port mapping: `docker ps`
    - Check if the host firewall allows access to the port
    - Verify the container is running: `docker ps | grep gofile-dl`
 
 3. **Download files not appearing**
-
    - Check the volume mounting: `docker inspect gofile-dl`
    - Verify the BASE_DIR environment variable is set correctly
    - Check directory permissions
