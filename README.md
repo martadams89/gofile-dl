@@ -229,19 +229,16 @@ Example health check response:
 ### Troubleshooting Docker Deployment
 
 1. **Container fails to start**
-
    - Check logs: `docker logs gofile-dl`
    - Verify environment variables are correctly set
    - Ensure the download directory has correct permissions
 
 2. **Cannot access web interface**
-
    - Confirm port mapping: `docker ps`
    - Check if the host firewall allows access to the port
    - Verify the container is running: `docker ps | grep gofile-dl`
 
 3. **Download files not appearing**
-
    - Check the volume mounting: `docker inspect gofile-dl`
    - Verify the BASE_DIR environment variable is set correctly
    - Check directory permissions
