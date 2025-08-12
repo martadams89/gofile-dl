@@ -16,7 +16,7 @@ jobs:
         id: rp
         with:
           release-type: simple
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: tag major and minor versions
         if: ${{ steps.rp.outputs.release_created }}
         run: |
