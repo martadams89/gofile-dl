@@ -1,6 +1,6 @@
 # Core dependencies
 Flask>=3.1.0
-requests==2.32.4
+requests==2.32.5
 pathvalidate==3.3.1
 
 # Flask extensions
