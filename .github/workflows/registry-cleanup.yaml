@@ -17,7 +17,7 @@ jobs:
           REPO: "${{ github.event.repository.name }}"
 
       - name: Delete old images
-        uses: snok/container-retention-policy@v3.0.0
+        uses: snok/container-retention-policy@v3.0.1
         id: main-images
         with:
           account: user
