@@ -17,7 +17,7 @@ psutil>=5.9.8
 certifi==2025.11.12
 charset-normalizer==3.4.4
 idna==3.11
-urllib3==2.5.0
+urllib3==2.6.0
 
 # For testing (uncomment when needed)
 # pytest>=7.4.0
