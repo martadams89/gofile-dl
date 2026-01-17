@@ -315,6 +315,7 @@ The incremental/sync mode is perfect for content that updates regularly, such as
 ### Why Use Incremental Mode?
 
 When downloading from ongoing series or regularly updated folders:
+
 - Avoid re-downloading files you already have
 - Save bandwidth and time
 - Keep your local copy synchronized with the remote folder
@@ -342,11 +343,12 @@ When downloading from ongoing series or regularly updated folders:
 
 Different uploaders use different naming conventions. You can customize the patterns to match your specific use case:
 
-1. **Via Web UI**: 
+1. **Via Web UI**:
    - Click "Advanced Options" to reveal pattern configuration
    - Enter pipe-separated patterns: `⭐NEW FILES in |NEW FILES in |⭐`
 
 2. **Via API/curl**:
+
    ```bash
    curl -X POST http://localhost:2355/start \
      -d "url=https://gofile.io/d/abc123" \
