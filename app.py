@@ -313,8 +313,6 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
             pause_callback=pause_callback, throttle_speed=throttle_speed,
             retry_attempts=retry_attempts, strip_emojis=strip_emojis,
             incremental=incremental, folder_pattern=folder_pattern
-            retry_attempts=retry_attempts, strip_emojis=strip_emojis,
-            incremental=incremental, folder_pattern=folder_pattern
         )
         download_tasks[task_id]['status'] = "completed"
     except PermissionError as e:
