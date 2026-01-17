@@ -835,8 +835,9 @@
             <small class="text-muted">Started: ${date}</small>
           </p>
           <p>Status: <span id="status-${taskId}" class="fw-bold">${info.status}</span></p>
-          <p>Overall Progress: <span id="overall-${taskId}" class="fw-bold">${info.overall_progress || 0}%</span>
-              | ETA: <span id="eta-${taskId}">${info.eta || "N/A"}</span></p>
+          <p>Folder Progress: <span id="overall-${taskId}" class="fw-bold">${info.overall_progress || 0}%</span>
+              | Current: <span id="folder-${taskId}" class="text-muted">${info.current_folder || "N/A"}</span></p>
+          ${info.download_speed ? `<p>Speed: <span class="text-success fw-bold">${formatFileSize(info.download_speed)}/s</span></p>` : ''}
           <div class="progress mb-3">
             <div id="progress-${taskId}" class="progress-bar" role="progressbar"
                   style="width: ${info.progress}%;" aria-valuenow="${info.progress}"

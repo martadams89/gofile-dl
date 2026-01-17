@@ -268,9 +268,22 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
         download_tasks[task_id]['status'] = "error"
         return
     
-    def overall_progress_callback(percent, eta):
+    def overall_progress_callback(percent, folder_name):
         download_tasks[task_id]['overall_progress'] = percent
-        download_tasks[task_id]['eta'] = eta
+        download_tasks[task_id]['current_folder'] = folder_name
+        
+        # Calculate download speed
+        elapsed = time.time() - start_time
+        if elapsed > 0:
+            # Calculate total bytes downloaded so far
+            total_downloaded = 0
+            for f in download_tasks[task_id].get('files', []):
+                if f.get('size') and f.get('progress'):
+                    total_downloaded += (f['size'] * f['progress']) / 100
+            
+            # Speed in bytes per second
+            speed_bps = total_downloaded / elapsed
+            download_tasks[task_id]['download_speed'] = speed_bps
     
     # Get throttle and retries from the task config
     throttle_speed = download_tasks[task_id].get('throttle')
@@ -323,7 +336,8 @@ def tasks():
         task_id: {
             'progress': task.get('progress', 0),
             'overall_progress': task.get('overall_progress', 0),
-            'eta': task.get('eta', "N/A"),
+            'current_folder': task.get('current_folder', 'N/A'),
+            'download_speed': task.get('download_speed', 0),
             'status': task.get('status', 'running'),
             'error_message': task.get('error_message', ""),
             'url': task.get('url', ""),
