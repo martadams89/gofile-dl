@@ -5,7 +5,9 @@ from pathvalidate import sanitize_filename
 import requests
 import hashlib
 import time
-from typing import Dict, Any, Optional, Callable
+import re
+import json
+from typing import Dict, Any, Optional, Callable, Set
 
 logging.basicConfig(
     level=logging.INFO,
@@ -15,6 +17,188 @@ logging.basicConfig(
 logger = logging.getLogger("GoFile")
 
 DEFAULT_TIMEOUT = 10  # 10 seconds
+
+def strip_emojis_func(text: str) -> str:
+    """
+    Remove emojis and other problematic Unicode characters from text.
+    
+    Args:
+        text: Input string potentially containing emojis
+        
+    Returns:
+        String with emojis removed
+    """
+    # Emoji pattern - covers most emoji ranges
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map symbols
+        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        "\U00002500-\U00002BEF"  # chinese char
+        "\U00002702-\U000027B0"
+        "\U000024C2-\U0001F251"
+        "\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
+        "\U0001FA00-\U0001FA6F"  # Chess Symbols
+        "\U0001FA70-\U0001FAFF"  # Symbols and Pictographs Extended-A
+        "\U00002600-\U000026FF"  # Miscellaneous Symbols
+        "\U00002700-\U000027BF"  # Dingbats
+        "]+",
+        flags=re.UNICODE
+    )
+    result = emoji_pattern.sub('', text)
+    # Clean up any double spaces or trailing/leading spaces
+    result = ' '.join(result.split())
+    return result.strip()
+
+def normalize_folder_name(name: str, custom_patterns: Optional[str] = None) -> str:
+    """
+    Normalize folder name by removing common prefixes like 'NEW FILES in'.
+    This helps match folders that get renamed after completion.
+    
+    Args:
+        name: Original folder name
+        custom_patterns: Optional pipe-separated list of patterns to strip (e.g., '⭐NEW FILES in |NEW FILES in |⭐')
+        
+    Returns:
+        Normalized folder name
+    """
+    # Default patterns
+    patterns = [
+        r'^⭐\s*NEW FILES in\s+',
+        r'^NEW FILES in\s+',
+        r'^⭐\s*',
+        r'^\*+\s*NEW FILES in\s+',
+        r'^\*+\s*',
+    ]
+    
+    # Add custom patterns if provided
+    if custom_patterns:
+        custom_list = [p.strip() for p in custom_patterns.split('|') if p.strip()]
+        # Convert custom patterns to regex patterns (escape special chars except spaces)
+        for pattern in custom_list:
+            # Escape regex special characters but preserve the pattern intent
+            escaped = re.escape(pattern)
+            # Replace escaped spaces with flexible whitespace matcher
+            escaped = escaped.replace('\\ ', '\\s*')
+            # Add anchors and trailing whitespace matcher
+            regex_pattern = f'^{escaped}\\s*'
+            patterns.insert(0, regex_pattern)  # Insert at beginning for priority
+    
+    result = name
+    for pattern in patterns:
+        result = re.sub(pattern, '', result, flags=re.IGNORECASE)
+    
+    return result.strip()
+
+class DownloadTracker:
+    """
+    Tracks downloaded files to enable incremental/sync downloads.
+    """
+    
+    def __init__(self, base_dir: str, content_id: str, folder_pattern: Optional[str] = None):
+        """
+        Initialize download tracker.
+        
+        Args:
+            base_dir: Base directory for downloads
+            content_id: GoFile content ID being tracked
+            folder_pattern: Custom patterns to strip from folder names (pipe-separated)
+        """
+        self.base_dir = base_dir
+        self.content_id = content_id
+        self.folder_pattern = folder_pattern
+        # Store tracking files in /config directory for persistence
+        config_dir = os.environ.get('CONFIG_DIR', '/config')
+        os.makedirs(config_dir, exist_ok=True)
+        self.tracking_file = os.path.join(config_dir, f".gofile_tracker_{content_id}.json")
+        self.downloaded_files: Set[str] = set()
+        self.load_tracking_data()
+    
+    def load_tracking_data(self) -> None:
+        """Load previously downloaded file list from tracking file."""
+        if os.path.exists(self.tracking_file):
+            try:
+                with open(self.tracking_file, 'r') as f:
+                    data = json.load(f)
+                    self.downloaded_files = set(data.get('files', []))
+                    logger.info(f"Loaded tracking data: {len(self.downloaded_files)} previously downloaded files")
+            except Exception as e:
+                logger.warning(f"Could not load tracking data: {e}")
+                self.downloaded_files = set()
+    
+    def save_tracking_data(self) -> None:
+        """Save downloaded file list to tracking file."""
+        try:
+            os.makedirs(os.path.dirname(self.tracking_file), exist_ok=True)
+            with open(self.tracking_file, 'w') as f:
+                json.dump({
+                    'content_id': self.content_id,
+                    'last_updated': time.time(),
+                    'files': list(self.downloaded_files)
+                }, f, indent=2)
+            logger.debug(f"Saved tracking data: {len(self.downloaded_files)} files")
+        except Exception as e:
+            logger.warning(f"Could not save tracking data: {e}")
+    
+    def is_downloaded(self, file_id: str, file_name: str) -> bool:
+        """
+        Check if a file has already been downloaded.
+        
+        Args:
+            file_id: GoFile file ID
+            file_name: File name
+            
+        Returns:
+            True if file was previously downloaded
+        """
+        key = f"{file_id}:{file_name}"
+        return key in self.downloaded_files
+    
+    def mark_downloaded(self, file_id: str, file_name: str) -> None:
+        """
+        Mark a file as downloaded.
+        
+        Args:
+            file_id: GoFile file ID
+            file_name: File name
+        """
+        key = f"{file_id}:{file_name}"
+        self.downloaded_files.add(key)
+        self.save_tracking_data()
+    
+    def find_existing_folder(self, folder_name: str, parent_dir: str) -> Optional[str]:
+        """
+        Find an existing folder that matches the given name, handling renames.
+        
+        Args:
+            folder_name: Current folder name
+            parent_dir: Parent directory to search in
+            
+        Returns:
+            Path to existing folder or None
+        """
+        if not os.path.exists(parent_dir):
+            return None
+        
+        # Normalize the target folder name with custom pattern
+        normalized_target = normalize_folder_name(folder_name, self.folder_pattern)
+        
+        # Check for exact match first
+        exact_path = os.path.join(parent_dir, sanitize_filename(folder_name))
+        if os.path.isdir(exact_path):
+            return exact_path
+        
+        # Look for similar folders (normalized match)
+        for item in os.listdir(parent_dir):
+            item_path = os.path.join(parent_dir, item)
+            if os.path.isdir(item_path):
+                normalized_item = normalize_folder_name(item, self.folder_pattern)
+                if normalized_item == normalized_target:
+                    logger.info(f"Found renamed folder: '{item}' matches '{folder_name}'")
+                    return item_path
+        
+        return None
 
 class GoFileMeta(type):
     """
@@ -106,7 +290,11 @@ class GoFile(metaclass=GoFileMeta):
                 file_progress_callback: Optional[Callable[[str, int, Optional[int]], None]] = None, 
                 pause_callback: Optional[Callable[[], bool]] = None, 
                 throttle_speed: Optional[int] = None,
-                retry_attempts: int = 0) -> None:
+                retry_attempts: int = 0,
+                strip_emojis: bool = False,
+                incremental: bool = False,
+                tracker: Optional[DownloadTracker] = None,
+                folder_pattern: Optional[str] = None) -> None:
         """
         Execute a download operation for a GoFile URL or content ID.
         
@@ -127,10 +315,18 @@ class GoFile(metaclass=GoFileMeta):
             pause_callback: Callback to check if download should pause
             throttle_speed: Download speed limit in KB/s
             retry_attempts: Number of retry attempts for failed downloads
+            strip_emojis: Whether to strip emojis from folder/file names
+            incremental: Enable incremental mode (skip already downloaded files)
+            tracker: Download tracker instance (created automatically if None)
+            folder_pattern: Custom patterns to strip from folder names (pipe-separated)
         """
         if content_id is not None:
             self.update_token()
             self.update_wt()
+            
+            # Initialize tracker for incremental mode
+            if incremental and tracker is None:
+                tracker = DownloadTracker(dir, content_id, folder_pattern)
             
             # Build API request with proper parameters
             params = {}
@@ -160,10 +356,39 @@ class GoFile(metaclass=GoFileMeta):
                 return
             if data["data"]["type"] == "folder":
                 dirname = data["data"]["name"]
+                
+                # Strip emojis if requested
+                if strip_emojis:
+                    dirname_clean = strip_emojis_func(dirname)
+                    if not dirname_clean:  # If name becomes empty after stripping
+                        dirname = f"folder_{content_id[:8]}"
+                    else:
+                        dirname = dirname_clean
+                
                 if name_callback:
                     name_callback(sanitize_filename(dirname))
-                folder_path = os.path.join(dir, sanitize_filename(dirname))
-                os.makedirs(folder_path, exist_ok=True)
+                
+                # Check for existing folder (handles renames in incremental mode)
+                if incremental and tracker:
+                    existing_folder = tracker.find_existing_folder(dirname, dir)
+                    if existing_folder:
+                        logger.info(f"Using existing folder: {existing_folder}")
+                        folder_path = existing_folder
+                    else:
+                        folder_path = os.path.join(dir, sanitize_filename(dirname))
+                else:
+                    folder_path = os.path.join(dir, sanitize_filename(dirname))
+                
+                # Create folder with better error handling
+                try:
+                    os.makedirs(folder_path, exist_ok=True)
+                except PermissionError as e:
+                    logger.error(f"Permission denied creating folder '{folder_path}': {e}")
+                    logger.error(f"Check that the parent directory is writable. Current user UID: {os.getuid()}")
+                    raise PermissionError(f"Cannot create folder '{folder_path}': Permission denied. Check Docker volume permissions.")
+                except OSError as e:
+                    logger.error(f"OS error creating folder '{folder_path}': {e}")
+                    raise OSError(f"Cannot create folder '{folder_path}': {e}")
                 
                 # Get children - they might be in 'children' or 'contents' depending on API version
                 children = data["data"].get("children", {})
@@ -174,9 +399,12 @@ class GoFile(metaclass=GoFileMeta):
                     logger.warning(f"No children found in folder {content_id} ({dirname})")
                     # Don't return - empty folders are valid
                     if overall_progress_callback:
-                        overall_progress_callback(100, "N/A")
+                        folder_name = data["data"].get("name", "folder")
+                        overall_progress_callback(100, folder_name)
                     return
-                overall_total = float(self.count_files(children))
+                
+                # Calculate progress for THIS folder only (not recursive)
+                overall_total = float(len(children))
                 files_completed = 0.0
                 
                 for child_id, child in children.items():
@@ -205,13 +433,37 @@ class GoFile(metaclass=GoFileMeta):
                                 file_progress_callback=file_progress_callback,
                                 pause_callback=pause_callback, 
                                 throttle_speed=throttle_speed,
-                                retry_attempts=retry_attempts
+                                retry_attempts=retry_attempts,
+                                strip_emojis=strip_emojis,
+                                incremental=incremental,
+                                tracker=tracker,
+                                folder_pattern=folder_pattern
                             )
                             files_completed += 1.0  # Count the folder as processed
                             
                         else:
                             # Download file
                             filename = child.get("name", "unknown")
+                            
+                            # Check if already downloaded in incremental mode
+                            if incremental and tracker and tracker.is_downloaded(child_id, filename):
+                                logger.info(f"Skipping already downloaded file: {filename}")
+                                files_completed += 1.0
+                                if callable(file_progress_callback):
+                                    file_path = os.path.join(folder_path, sanitize_filename(filename))
+                                    file_progress_callback(file_path, 100)
+                                continue
+                            
+                            # Strip emojis if requested
+                            if strip_emojis:
+                                filename_clean = strip_emojis_func(filename)
+                                if not filename_clean:  # If name becomes empty after stripping
+                                    # Keep extension if present
+                                    ext = os.path.splitext(filename)[1]
+                                    filename = f"file_{child_id[:8]}{ext}"
+                                else:
+                                    filename = filename_clean
+                            
                             file_path = os.path.join(folder_path, sanitize_filename(filename))
                             link = child.get("link", "")
                             
@@ -235,6 +487,10 @@ class GoFile(metaclass=GoFileMeta):
                                 retry_attempts=retry_attempts
                             )
                             
+                            # Mark as downloaded in incremental mode
+                            if incremental and tracker:
+                                tracker.mark_downloaded(child_id, filename)
+                            
                             if callable(file_progress_callback):
                                 file_progress_callback(file_path, 100)  # file complete
                             
@@ -245,14 +501,29 @@ class GoFile(metaclass=GoFileMeta):
                         files_completed += 1.0  # Count as processed even if failed
                         continue
                     
-                    # Update progress after each child is processed
+                    # Update progress after each child in this folder
                     if overall_progress_callback and overall_total > 0:
                         percent = int((files_completed / overall_total) * 100)
-                        overall_progress_callback(percent, "N/A")
+                        folder_name = data["data"].get("name", "folder")
+                        overall_progress_callback(percent, folder_name)
+                
+                # Mark this folder as complete
                 if overall_progress_callback:
-                    overall_progress_callback(100, "N/A")
+                    folder_name = data["data"].get("name", "folder")
+                    overall_progress_callback(100, folder_name)
             else:
                 filename = data["data"]["name"]
+                
+                # Strip emojis if requested
+                if strip_emojis:
+                    filename_clean = strip_emojis_func(filename)
+                    if not filename_clean:  # If name becomes empty after stripping
+                        # Keep extension if present
+                        ext = os.path.splitext(filename)[1]
+                        filename = f"file_{content_id[:8]}{ext}"
+                    else:
+                        filename = filename_clean
+                
                 file_path = os.path.join(dir, sanitize_filename(filename))
                 link = data["data"]["link"]
                 if callable(name_callback):
@@ -268,7 +539,7 @@ class GoFile(metaclass=GoFileMeta):
                 self.execute(dir=dir, content_id=cid, password=password,
                              progress_callback=progress_callback, cancel_event=cancel_event,
                              name_callback=name_callback, overall_progress_callback=overall_progress_callback,
-                             start_time=start_time, file_progress_callback=file_progress_callback, pause_callback=pause_callback, throttle_speed=throttle_speed, retry_attempts=retry_attempts)
+                             start_time=start_time, file_progress_callback=file_progress_callback, pause_callback=pause_callback, throttle_speed=throttle_speed, retry_attempts=retry_attempts, strip_emojis=strip_emojis, incremental=incremental, tracker=tracker, folder_pattern=folder_pattern)
             else:
                 logger.error(f"Invalid URL: {url}")
         else:

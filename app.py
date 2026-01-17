@@ -186,12 +186,21 @@ def health_check():
         'version': '1.0.0',  # Should be dynamically determined in production
     }
     
+    # Add directory permission info
+    base_dir = os.environ.get("BASE_DIR", "/data")
+    dir_info = {
+        'base_dir': base_dir,
+        'exists': os.path.exists(base_dir),
+        'writable': os.access(base_dir, os.W_OK) if os.path.exists(base_dir) else False,
+    }
+    
     # Return combined status
     return jsonify({
         'status': 'ok',
         'timestamp': time.time(),
         'system': system_info,
-        'application': app_info
+        'application': app_info,
+        'directories': dir_info
     })
 
 def download_task(url: str, directory: Optional[str], password: Optional[str], task_id: str) -> None:
@@ -237,6 +246,28 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
     output_dir = directory if directory else "./output"
     start_time = time.time()
     
+    # Check if output directory is writable before starting download
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+        # Test write permissions
+        test_file = os.path.join(output_dir, ".gofile_permission_test")
+        try:
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+        except (IOError, OSError) as e:
+            error_msg = f"Output directory '{output_dir}' is not writable: {str(e)}. Check Docker volume permissions and ensure the directory is mounted correctly."
+            print(f"Task {task_id} permission error: {error_msg}")
+            download_tasks[task_id]['error_message'] = error_msg
+            download_tasks[task_id]['status'] = "error"
+            return
+    except Exception as e:
+        error_msg = f"Cannot create or access output directory '{output_dir}': {str(e)}. Check Docker volume configuration."
+        print(f"Task {task_id} directory error: {error_msg}")
+        download_tasks[task_id]['error_message'] = error_msg
+        download_tasks[task_id]['status'] = "error"
+        return
+    
     def overall_progress_callback(percent, eta):
         download_tasks[task_id]['overall_progress'] = percent
         download_tasks[task_id]['eta'] = eta
@@ -244,6 +275,9 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
     # Get throttle and retries from the task config
     throttle_speed = download_tasks[task_id].get('throttle')
     retry_attempts = download_tasks[task_id].get('retries', 3)
+    strip_emojis = download_tasks[task_id].get('strip_emojis', False)
+    incremental = download_tasks[task_id].get('incremental', False)
+    folder_pattern = download_tasks[task_id].get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
     
     try:
         GoFile().execute(
@@ -252,12 +286,30 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
             name_callback=name_cb, overall_progress_callback=overall_progress_callback,
             start_time=start_time, file_progress_callback=file_progress_callback,
             pause_callback=pause_callback, throttle_speed=throttle_speed,
-            retry_attempts=retry_attempts
+            retry_attempts=retry_attempts, strip_emojis=strip_emojis,
+            incremental=incremental, folder_pattern=folder_pattern
         )
         download_tasks[task_id]['status'] = "completed"
+    except PermissionError as e:
+        error_msg = f"Permission denied: {str(e)}. Check that the output directory has correct permissions (should be writable by UID {os.getuid()})."
+        print(f"Task {task_id} permission error: {error_msg}")
+        download_tasks[task_id]['error_message'] = error_msg
+        if cancel_event.is_set():
+            download_tasks[task_id]['status'] = "cancelled"
+        else:
+            download_tasks[task_id]['status'] = "error"
+    except OSError as e:
+        error_msg = f"Filesystem error: {str(e)}. This may be a Docker volume mount issue or disk space problem."
+        print(f"Task {task_id} filesystem error: {error_msg}")
+        download_tasks[task_id]['error_message'] = error_msg
+        if cancel_event.is_set():
+            download_tasks[task_id]['status'] = "cancelled"
+        else:
+            download_tasks[task_id]['status'] = "error"
     except Exception as e:
-        print(f"Task {task_id} error: {e}")
-        download_tasks[task_id]['error_message'] = str(e)
+        error_msg = str(e)
+        print(f"Task {task_id} error: {error_msg}")
+        download_tasks[task_id]['error_message'] = error_msg
         if cancel_event.is_set():
             download_tasks[task_id]['status'] = "cancelled"
         else:
@@ -338,6 +390,15 @@ def start_download():
     except ValueError:
         retries = 3  # Default to 3 retries
     
+    # Get emoji stripping option
+    strip_emojis = request.form.get('strip_emojis') == 'true'
+    
+    # Get incremental mode option
+    incremental = request.form.get('incremental') == 'true'
+    
+    # Get custom folder pattern for incremental mode
+    folder_pattern = request.form.get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
+    
     if not url:
         return jsonify({"error": "URL is required"}), 400
     
@@ -361,7 +422,10 @@ def start_download():
         'name': name,
         'paused': False,
         'throttle': throttle,
-        'retries': retries
+        'retries': retries,
+        'strip_emojis': strip_emojis,
+        'incremental': incremental,
+        'folder_pattern': folder_pattern
     }
     
     thread = threading.Thread(target=download_task, args=(url, directory, password, task_id))

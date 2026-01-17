@@ -267,6 +267,76 @@
             </div>
           </div>
         </div>
+        <div class="row mb-3">
+          <div class="col-12">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="strip_emojis"
+                name="strip_emojis"
+                value="true"
+              />
+              <label class="form-check-label" for="strip_emojis">
+                <i class="bi bi-emoji-smile"></i> Strip emojis from folder/file
+                names
+                <small class="text-muted">(Recommended for Linux CLI)</small>
+              </label>
+            </div>
+            <div class="form-check mt-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="incremental"
+                name="incremental"
+                value="true"
+              />
+              <label class="form-check-label" for="incremental">
+                <i class="bi bi-arrow-repeat"></i>
+                <strong>Incremental/Sync mode</strong> - Only download new files
+                <small class="text-muted"
+                  >(Skip already downloaded files)</small
+                >
+              </label>
+            </div>
+          </div>
+        </div>
+        <!-- Advanced Options -->
+        <div class="row mb-3">
+          <div class="col-12">
+            <button
+              class="btn btn-sm btn-outline-secondary"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#advancedOptions"
+              aria-expanded="false"
+              aria-controls="advancedOptions"
+            >
+              <i class="bi bi-gear"></i> Advanced Options
+            </button>
+            <div class="collapse mt-3" id="advancedOptions">
+              <div class="card card-body">
+                <label for="folder_pattern" class="form-label">
+                  Folder Name Pattern to Strip (for Incremental mode)
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="folder_pattern"
+                  name="folder_pattern"
+                  placeholder="⭐NEW FILES in |NEW FILES in |⭐"
+                  value="⭐NEW FILES in |NEW FILES in |⭐"
+                />
+                <div class="form-text">
+                  Patterns to remove from folder names when matching
+                  (pipe-separated). Example:
+                  <code>⭐NEW FILES in |NEW FILES in |⭐</code> will match
+                  folders renamed from "⭐NEW FILES in Show S1" to "Show S1"
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <button type="submit" class="btn btn-primary">
           <i class="bi bi-cloud-download me-1"></i> Start Download
         </button>
@@ -770,12 +840,31 @@
             const fileSize = f.size
               ? ` <span class="file-size">${formatFileSize(f.size)}</span>`
               : "";
+
+            // Get relative path to show folder structure
+            let displayPath = f.file;
+            // Try to make it relative to the base download directory
+            if (info.directory) {
+              displayPath = f.file
+                .replace(info.directory, "")
+                .replace(/^\/+/, "");
+            }
+
+            // Split path into folder and file
+            const pathParts = displayPath.split("/");
+            const fileName = pathParts.pop();
+            const folderPath =
+              pathParts.length > 0 ? pathParts.join("/") + "/" : "";
+
             filesList.innerHTML += `
               <div class="ms-3 mb-1">
-                <i class="bi bi-file-earmark me-1"></i>
-                <strong>${f.file.split("/").pop()}</strong>: 
-                <span>${f.progress}%</span>${fileSize}
-                <div class="progress" style="height: 5px;">
+                ${folderPath ? `<small class="text-muted"><i class="bi bi-folder me-1"></i>${folderPath}</small><br/>` : ""}
+                <span class="ms-3">
+                  <i class="bi bi-file-earmark me-1"></i>
+                  <strong>${fileName}</strong>: 
+                  <span>${f.progress}%</span>${fileSize}
+                </span>
+                <div class="progress ms-3" style="height: 5px;">
                   <div class="progress-bar" role="progressbar" style="width: ${f.progress}%"></div>
                 </div>
               </div>
