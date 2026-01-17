@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/martadams89/gofile-dl/compare/v1.4.0...v1.5.0) (2026-01-17)
+
+
+### Features
+
+* add incremental sync mode and emoji stripping options; enhance error handling and directory permissions ([#105](https://github.com/martadams89/gofile-dl/issues/105)) ([55e868e](https://github.com/martadams89/gofile-dl/commit/55e868ee0228e2b54aa9ee8c6823ed7f183aae23))
+
 ## [1.4.0](https://github.com/martadams89/gofile-dl/compare/v1.3.0...v1.4.0) (2026-01-17)
 
 ### Features
