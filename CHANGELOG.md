@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/martadams89/gofile-dl/compare/v1.3.0...v1.4.0) (2026-01-17)
+
+
+### Features
+
+* update gofile-dl to latest api requirements and add in tests. ([#103](https://github.com/martadams89/gofile-dl/issues/103)) ([3c9c520](https://github.com/martadams89/gofile-dl/commit/3c9c5201f1baf430ac13c244eff49b8cf8992a94))
+
 ## [1.3.0](https://github.com/martadams89/gofile-dl/compare/v1.2.0...v1.3.0) (2025-04-06)
 
 ### Features
