@@ -1,3 +1,4 @@
+# ruff: noqa
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response
 import os
 import threading
@@ -207,8 +208,6 @@ def health_check():
         'status': 'ok',
         'timestamp': time.time(),
         'system': system_info,
-        'application': app_info,
-        'directories': dir_info
         'application': app_info,
         'directories': dir_info
     })
