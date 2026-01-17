@@ -44,20 +44,22 @@ class GoFile(metaclass=GoFileMeta):
     
     def count_files(self, children: Dict[str, Dict]) -> int:
         """
-        Count the total number of files in a folder structure recursively.
+        Count the total number of files in a folder structure.
+        
+        Note: This only counts files in the current level, not nested folders,
+        since nested folder contents need separate API calls.
         
         Args:
             children: Dictionary of child items from GoFile API response
             
         Returns:
-            int: Total number of files found
+            int: Total number of files and folders found
         """
         count = 0
         for child in children.values():
-            if child["type"] == "folder":
-                count += self.count_files(child.get("children", {}))
-            else:
-                count += 1
+            # Count each item (file or folder) as 1
+            # We can't count nested folder contents without additional API calls
+            count += 1
         return count
     
     def update_token(self) -> None:
@@ -76,17 +78,20 @@ class GoFile(metaclass=GoFileMeta):
     
     def update_wt(self) -> None:
         """
-        Update the 'wt' parameter needed for content requests.
+        Update the 'wt' (websiteToken) parameter needed for content requests.
         
-        Extracts the wt parameter from GoFile's JavaScript code.
+        Extracts the wt parameter from GoFile's config.js JavaScript file.
         """
         if self.wt == "":
-            alljs = requests.get("https://gofile.io/dist/js/global.js", timeout=DEFAULT_TIMEOUT).text
-            if 'appdata.wt = "' in alljs:
-                self.wt = alljs.split('appdata.wt = "')[1].split('"')[0]
-                logger.info(f"Updated wt: {self.wt}")
-            else:
-                logger.error("Cannot get wt")
+            try:
+                alljs = requests.get("https://gofile.io/dist/js/config.js", timeout=DEFAULT_TIMEOUT).text
+                if 'appdata.wt = "' in alljs:
+                    self.wt = alljs.split('appdata.wt = "')[1].split('"')[0]
+                    logger.info(f"Updated wt: {self.wt}")
+                else:
+                    logger.error("Cannot extract wt from config.js")
+            except Exception as e:
+                logger.error(f"Failed to get wt: {e}")
     
     def execute(self, 
                 dir: str, 
@@ -126,13 +131,27 @@ class GoFile(metaclass=GoFileMeta):
         if content_id is not None:
             self.update_token()
             self.update_wt()
-            hash_password = hashlib.sha256(password.encode()).hexdigest() if password else ""
-            response = requests.get(
-                f"https://api.gofile.io/contents/{content_id}?wt={self.wt}&cache=true&password={hash_password}",
-                headers={"Authorization": "Bearer " + self.token},
-                timeout=DEFAULT_TIMEOUT
-            )
-            data = response.json()
+            
+            # Build API request with proper parameters
+            params = {}
+            if password:
+                hash_password = hashlib.sha256(password.encode()).hexdigest()
+                params['password'] = hash_password
+            
+            try:
+                response = requests.get(
+                    f"https://api.gofile.io/contents/{content_id}",
+                    headers={
+                        "Authorization": "Bearer " + self.token,
+                        "X-Website-Token": self.wt
+                    },
+                    params=params,
+                    timeout=DEFAULT_TIMEOUT
+                )
+                data = response.json()
+            except Exception as e:
+                logger.error(f"Failed to fetch content {content_id}: {e}")
+                return
             if data.get("status") != "ok":
                 logger.error("API error: %s", data)
                 return
@@ -145,45 +164,88 @@ class GoFile(metaclass=GoFileMeta):
                     name_callback(sanitize_filename(dirname))
                 folder_path = os.path.join(dir, sanitize_filename(dirname))
                 os.makedirs(folder_path, exist_ok=True)
+                
+                # Get children - they might be in 'children' or 'contents' depending on API version
                 children = data["data"].get("children", {})
                 if not children:
-                    logger.error("No files/folders found in folder response: %s", data)
+                    children = data["data"].get("contents", {})
+                
+                if not children:
+                    logger.warning(f"No children found in folder {content_id} ({dirname})")
+                    # Don't return - empty folders are valid
+                    if overall_progress_callback:
+                        overall_progress_callback(100, "N/A")
                     return
                 overall_total = float(self.count_files(children))
                 files_completed = 0.0
-                for id, child in children.items():
+                
+                for child_id, child in children.items():
                     if cancel_event and cancel_event.is_set():
                         break
+                    
                     try:
-                        if child["type"] == "folder":
-                            prev = float(self.count_files(child.get("children", {})))
+                        child_type = child.get("type", "file")
+                        
+                        if child_type == "folder":
+                            # Recursively process subfolder
+                            logger.info(f"Processing subfolder: {child.get('name', child_id)}")
+                            
+                            # Recursively download subfolder contents
+                            # Note: Progress tracking for subfolders is approximate since we need
+                            # to make API calls to get their contents
                             self.execute(
-                                dir=folder_path, content_id=id, password=password,
-                                progress_callback=progress_callback, cancel_event=cancel_event,
-                                name_callback=name_callback, overall_progress_callback=overall_progress_callback,
-                                start_time=start_time, file_progress_callback=file_progress_callback,
-                                pause_callback=pause_callback, throttle_speed=throttle_speed,
+                                dir=folder_path, 
+                                content_id=child_id, 
+                                password=password,
+                                progress_callback=progress_callback, 
+                                cancel_event=cancel_event,
+                                name_callback=None,  # Don't update main task name for subfolders
+                                overall_progress_callback=overall_progress_callback,
+                                start_time=start_time, 
+                                file_progress_callback=file_progress_callback,
+                                pause_callback=pause_callback, 
+                                throttle_speed=throttle_speed,
                                 retry_attempts=retry_attempts
                             )
-                            files_completed += prev
+                            files_completed += 1.0  # Count the folder as processed
+                            
                         else:
-                            filename = child["name"]
+                            # Download file
+                            filename = child.get("name", "unknown")
                             file_path = os.path.join(folder_path, sanitize_filename(filename))
-                            link = child["link"]
+                            link = child.get("link", "")
+                            
+                            if not link:
+                                logger.error(f"No download link for file: {filename}")
+                                files_completed += 1.0
+                                continue
+                            
+                            logger.info(f"Downloading file: {filename}")
+                            
                             if callable(file_progress_callback):
                                 file_progress_callback(file_path, 0)  # register start (0%)
+                            
                             self.download(
-                                link, file_path, progress_callback=progress_callback,
-                                cancel_event=cancel_event, file_progress_callback=file_progress_callback,
-                                pause_callback=pause_callback, throttle_speed=throttle_speed,
+                                link, file_path, 
+                                progress_callback=progress_callback,
+                                cancel_event=cancel_event, 
+                                file_progress_callback=file_progress_callback,
+                                pause_callback=pause_callback, 
+                                throttle_speed=throttle_speed,
                                 retry_attempts=retry_attempts
                             )
+                            
                             if callable(file_progress_callback):
                                 file_progress_callback(file_path, 100)  # file complete
+                            
                             files_completed += 1.0
+                            
                     except Exception as e_inner:
-                        logger.error(f"Error downloading child {id}: {e_inner}")
+                        logger.error(f"Error processing child {child_id}: {e_inner}")
+                        files_completed += 1.0  # Count as processed even if failed
                         continue
+                    
+                    # Update progress after each child is processed
                     if overall_progress_callback and overall_total > 0:
                         percent = int((files_completed / overall_total) * 100)
                         overall_progress_callback(percent, "N/A")

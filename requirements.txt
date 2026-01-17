@@ -14,10 +14,10 @@ PyYAML>=6.0.1
 psutil>=5.9.8
 
 # Security
-certifi==2025.11.12
+certifi==2026.1.4
 charset-normalizer==3.4.4
 idna==3.11
-urllib3==2.5.0
+urllib3==2.6.0
 
 # For testing (uncomment when needed)
 # pytest>=7.4.0
