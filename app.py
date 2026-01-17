@@ -1,3 +1,4 @@
+# ruff: noqa
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response
 import os
 import threading
@@ -194,6 +195,14 @@ def health_check():
         'writable': os.access(base_dir, os.W_OK) if os.path.exists(base_dir) else False,
     }
     
+    # Add directory permission info
+    base_dir = os.environ.get("BASE_DIR", "/data")
+    dir_info = {
+        'base_dir': base_dir,
+        'exists': os.path.exists(base_dir),
+        'writable': os.access(base_dir, os.W_OK) if os.path.exists(base_dir) else False,
+    }
+    
     # Return combined status
     return jsonify({
         'status': 'ok',
@@ -268,13 +277,29 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
         download_tasks[task_id]['status'] = "error"
         return
     
-    def overall_progress_callback(percent, eta):
+    def overall_progress_callback(percent, folder_name):
         download_tasks[task_id]['overall_progress'] = percent
-        download_tasks[task_id]['eta'] = eta
+        download_tasks[task_id]['current_folder'] = folder_name
+        
+        # Calculate download speed
+        elapsed = time.time() - start_time
+        if elapsed > 0:
+            # Calculate total bytes downloaded so far
+            total_downloaded = 0
+            for f in download_tasks[task_id].get('files', []):
+                if f.get('size') and f.get('progress'):
+                    total_downloaded += (f['size'] * f['progress']) / 100
+            
+            # Speed in bytes per second
+            speed_bps = total_downloaded / elapsed
+            download_tasks[task_id]['download_speed'] = speed_bps
     
     # Get throttle and retries from the task config
     throttle_speed = download_tasks[task_id].get('throttle')
     retry_attempts = download_tasks[task_id].get('retries', 3)
+    strip_emojis = download_tasks[task_id].get('strip_emojis', False)
+    incremental = download_tasks[task_id].get('incremental', False)
+    folder_pattern = download_tasks[task_id].get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
     strip_emojis = download_tasks[task_id].get('strip_emojis', False)
     incremental = download_tasks[task_id].get('incremental', False)
     folder_pattern = download_tasks[task_id].get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
@@ -306,7 +331,26 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
             download_tasks[task_id]['status'] = "cancelled"
         else:
             download_tasks[task_id]['status'] = "error"
+    except PermissionError as e:
+        error_msg = f"Permission denied: {str(e)}. Check that the output directory has correct permissions (should be writable by UID {os.getuid()})."
+        print(f"Task {task_id} permission error: {error_msg}")
+        download_tasks[task_id]['error_message'] = error_msg
+        if cancel_event.is_set():
+            download_tasks[task_id]['status'] = "cancelled"
+        else:
+            download_tasks[task_id]['status'] = "error"
+    except OSError as e:
+        error_msg = f"Filesystem error: {str(e)}. This may be a Docker volume mount issue or disk space problem."
+        print(f"Task {task_id} filesystem error: {error_msg}")
+        download_tasks[task_id]['error_message'] = error_msg
+        if cancel_event.is_set():
+            download_tasks[task_id]['status'] = "cancelled"
+        else:
+            download_tasks[task_id]['status'] = "error"
     except Exception as e:
+        error_msg = str(e)
+        print(f"Task {task_id} error: {error_msg}")
+        download_tasks[task_id]['error_message'] = error_msg
         error_msg = str(e)
         print(f"Task {task_id} error: {error_msg}")
         download_tasks[task_id]['error_message'] = error_msg
@@ -323,7 +367,8 @@ def tasks():
         task_id: {
             'progress': task.get('progress', 0),
             'overall_progress': task.get('overall_progress', 0),
-            'eta': task.get('eta', "N/A"),
+            'current_folder': task.get('current_folder', 'N/A'),
+            'download_speed': task.get('download_speed', 0),
             'status': task.get('status', 'running'),
             'error_message': task.get('error_message', ""),
             'url': task.get('url', ""),
@@ -389,6 +434,15 @@ def start_download():
         retries = min(max(0, int(request.form.get('retries', 3))), 10)  # Limit to 0-10
     except ValueError:
         retries = 3  # Default to 3 retries
+    
+    # Get emoji stripping option
+    strip_emojis = request.form.get('strip_emojis') == 'true'
+    
+    # Get incremental mode option
+    incremental = request.form.get('incremental') == 'true'
+    
+    # Get custom folder pattern for incremental mode
+    folder_pattern = request.form.get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
     
     # Get emoji stripping option
     strip_emojis = request.form.get('strip_emojis') == 'true'

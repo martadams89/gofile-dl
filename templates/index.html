@@ -635,6 +635,10 @@
             // Update dashboard
             updateDashboard(tasksData);
             const panel = document.getElementById("tasks-panel");
+
+            // Save current scroll position
+            const scrollTop = panel.scrollTop;
+
             panel.innerHTML = "";
             const now = Date.now() / 1000; // seconds
             const filterDays = getFilterDays();
@@ -647,6 +651,9 @@
                 );
               },
             );
+
+            // Sort by timestamp descending (newest first)
+            filteredTasks.sort((a, b) => b[1].timestamp - a[1].timestamp);
             // If grouping is enabled
             if (groupOption !== "none") {
               // Create groups
@@ -766,6 +773,9 @@
               `;
               panel.appendChild(emptyState);
             }
+
+            // Restore scroll position
+            panel.scrollTop = scrollTop;
           });
       }
       // Create a task card element
@@ -825,8 +835,9 @@
             <small class="text-muted">Started: ${date}</small>
           </p>
           <p>Status: <span id="status-${taskId}" class="fw-bold">${info.status}</span></p>
-          <p>Overall Progress: <span id="overall-${taskId}" class="fw-bold">${info.overall_progress || 0}%</span>
-              | ETA: <span id="eta-${taskId}">${info.eta || "N/A"}</span></p>
+          <p>Folder Progress: <span id="overall-${taskId}" class="fw-bold">${info.overall_progress || 0}%</span>
+              | Current: <span id="folder-${taskId}" class="text-muted">${info.current_folder || "N/A"}</span></p>
+          ${info.download_speed ? `<p>Speed: <span class="text-success fw-bold">${formatFileSize(info.download_speed)}/s</span></p>` : ""}
           <div class="progress mb-3">
             <div id="progress-${taskId}" class="progress-bar" role="progressbar"
                   style="width: ${info.progress}%;" aria-valuenow="${info.progress}"
@@ -836,40 +847,77 @@
         if (info.files && info.files.length > 0) {
           const filesList = document.createElement("div");
           filesList.className = "task-file-list mb-3";
-          info.files.forEach((f) => {
-            const fileSize = f.size
-              ? ` <span class="file-size">${formatFileSize(f.size)}</span>`
-              : "";
 
-            // Get relative path to show folder structure
+          // Build hierarchical tree structure
+          const fileTree = {};
+
+          info.files.forEach((f) => {
+            // Get relative path
             let displayPath = f.file;
-            // Try to make it relative to the base download directory
             if (info.directory) {
               displayPath = f.file
                 .replace(info.directory, "")
                 .replace(/^\/+/, "");
             }
 
-            // Split path into folder and file
             const pathParts = displayPath.split("/");
             const fileName = pathParts.pop();
-            const folderPath =
-              pathParts.length > 0 ? pathParts.join("/") + "/" : "";
+            const folderPath = pathParts.join("/");
 
-            filesList.innerHTML += `
-              <div class="ms-3 mb-1">
-                ${folderPath ? `<small class="text-muted"><i class="bi bi-folder me-1"></i>${folderPath}</small><br/>` : ""}
-                <span class="ms-3">
-                  <i class="bi bi-file-earmark me-1"></i>
-                  <strong>${fileName}</strong>: 
-                  <span>${f.progress}%</span>${fileSize}
-                </span>
-                <div class="progress ms-3" style="height: 5px;">
-                  <div class="progress-bar" role="progressbar" style="width: ${f.progress}%"></div>
-                </div>
-              </div>
-            `;
+            // Create folder entry if doesn't exist
+            if (!fileTree[folderPath]) {
+              fileTree[folderPath] = [];
+            }
+
+            // Add file to folder
+            fileTree[folderPath].push({
+              name: fileName,
+              progress: f.progress,
+              size: f.size,
+            });
           });
+
+          // Sort folders (root first, then alphabetically)
+          const sortedFolders = Object.keys(fileTree).sort((a, b) => {
+            if (a === "") return -1;
+            if (b === "") return 1;
+            return a.localeCompare(b);
+          });
+
+          // Display hierarchical structure
+          sortedFolders.forEach((folderPath) => {
+            const files = fileTree[folderPath];
+
+            // Display folder header if not root
+            if (folderPath !== "") {
+              const folderHeader = document.createElement("div");
+              folderHeader.className = "ms-2 mb-1 fw-bold text-primary";
+              folderHeader.innerHTML = `<i class="bi bi-folder me-1"></i>${folderPath}`;
+              filesList.appendChild(folderHeader);
+            }
+
+            // Display files in this folder
+            files.forEach((file) => {
+              const fileSize = file.size
+                ? ` <span class="file-size">${formatFileSize(file.size)}</span>`
+                : "";
+
+              const fileDiv = document.createElement("div");
+              fileDiv.className = "ms-4 mb-1";
+              fileDiv.innerHTML = `
+                <span>
+                  <i class="bi bi-file-earmark me-1"></i>
+                  <strong>${file.name}</strong>: 
+                  <span>${file.progress}%</span>${fileSize}
+                </span>
+                <div class="progress ms-4" style="height: 5px;">
+                  <div class="progress-bar" role="progressbar" style="width: ${file.progress}%"></div>
+                </div>
+              `;
+              filesList.appendChild(fileDiv);
+            });
+          });
+
           body.appendChild(filesList);
         }
         // Controls section
