@@ -7,9 +7,11 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-active-success)
 
-A powerful, modern web application and CLI tool for downloading files and folders from GoFile.io links. Featuring a responsive web interface, task management, progress tracking, and Docker support.
+A powerful, modern web application and CLI tool for downloading files and folders from GoFile.io links.
+Featuring a responsive web interface, task management, progress tracking, and Docker support.
 
-_Originally inspired by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl) but completely rebuilt with extensive enhancements and a modern architecture._
+_Originally inspired by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl) but completely rebuilt with
+extensive enhancements and a modern architecture._
 
 ## Important Notes
 
@@ -73,7 +75,8 @@ This application has been updated to work with GoFile's latest API changes:
 
 ## Docker Deployment Guide
 
-GoFile Downloader is designed to run well in containers. This section provides comprehensive information on deploying with Docker.
+GoFile Downloader is designed to run well in containers. This section provides comprehensive information on
+deploying with Docker.
 
 ### Quick Start with Docker
 
@@ -225,7 +228,8 @@ services:
 
 ### Health Check and Monitoring
 
-GoFile Downloader provides a health check endpoint at `/health` that returns system information and application status in JSON format. This can be used by container orchestration tools to monitor the application's health.
+GoFile Downloader provides a health check endpoint at `/health` that returns system information and application
+status in JSON format. This can be used by container orchestration tools to monitor the application's health.
 
 Example health check response:
 
@@ -281,9 +285,11 @@ Example health check response:
 
 5. **GoFile download errors**
    - Error "Cannot get wt": GoFile may have updated their JavaScript structure. Check for application updates.
-   - Error "API error: error-notPremium": Ensure you're using the latest version with `X-Website-Token` header support
+   - Error "API error: error-notPremium": Ensure you're using the latest version with `X-Website-Token`
+     header support
    - Nested folders not downloading: Verify you're providing the top-level folder URL, not individual file links
-   - Special characters in filenames: These are automatically sanitized - check the `downloads` folder for the converted names
+   - Special characters in filenames: These are automatically sanitized - check the `downloads` folder for the
+     converted names
 
 ## Testing
 
@@ -310,7 +316,8 @@ The test script verifies:
 
 ## Use Case: Tracking Ongoing Series with Incremental Mode
 
-The incremental/sync mode is perfect for content that updates regularly, such as TV series, podcast archives, or any collection that receives periodic updates.
+The incremental/sync mode is perfect for content that updates regularly, such as TV series, podcast archives,
+or any collection that receives periodic updates.
 
 ### Why Use Incremental Mode?
 
@@ -382,7 +389,7 @@ docker-compose exec gofile-dl curl -X POST http://localhost:2355/start \
   -d "folder_pattern=⭐NEW FILES in |NEW FILES in |⭐"
 ```
 
-### Important Notes
+### Configuration Notes
 
 - Tracking files are stored in `/config` directory - **ensure this volume is mounted** in your docker-compose.yml
 - Delete the tracking file `.gofile_tracker_<contentId>.json` to force a complete re-download
@@ -426,7 +433,8 @@ black .
 
 Having issues with gofile-dl? Here are some resources:
 
-- **GitHub Issues**: Use our [issue tracker](https://github.com/martadams89/gofile-dl/issues) for bug reports and feature requests.
+- **GitHub Issues**: Use our [issue tracker](https://github.com/martadams89/gofile-dl/issues) for bug reports and
+  feature requests.
 
 ## Versioning
 
