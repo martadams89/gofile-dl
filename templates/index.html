@@ -852,14 +852,25 @@
           const fileTree = {};
 
           info.files.forEach((f) => {
+<<<<<<< HEAD
             // Get relative path
             let displayPath = f.file;
+=======
+            const fileSize = f.size
+              ? ` <span class="file-size">${formatFileSize(f.size)}</span>`
+              : "";
+
+            // Get relative path to show folder structure
+            let displayPath = f.file;
+            // Try to make it relative to the base download directory
+>>>>>>> origin/main
             if (info.directory) {
               displayPath = f.file
                 .replace(info.directory, "")
                 .replace(/^\/+/, "");
             }
 
+<<<<<<< HEAD
             const pathParts = displayPath.split("/");
             const fileName = pathParts.pop();
             const folderPath = pathParts.join("/");
@@ -875,6 +886,27 @@
               progress: f.progress,
               size: f.size,
             });
+=======
+            // Split path into folder and file
+            const pathParts = displayPath.split("/");
+            const fileName = pathParts.pop();
+            const folderPath =
+              pathParts.length > 0 ? pathParts.join("/") + "/" : "";
+
+            filesList.innerHTML += `
+              <div class="ms-3 mb-1">
+                ${folderPath ? `<small class="text-muted"><i class="bi bi-folder me-1"></i>${folderPath}</small><br/>` : ""}
+                <span class="ms-3">
+                  <i class="bi bi-file-earmark me-1"></i>
+                  <strong>${fileName}</strong>: 
+                  <span>${f.progress}%</span>${fileSize}
+                </span>
+                <div class="progress ms-3" style="height: 5px;">
+                  <div class="progress-bar" role="progressbar" style="width: ${f.progress}%"></div>
+                </div>
+              </div>
+            `;
+>>>>>>> origin/main
           });
 
           // Sort folders (root first, then alphabetically)

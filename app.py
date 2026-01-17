@@ -194,11 +194,21 @@ def health_check():
         'writable': os.access(base_dir, os.W_OK) if os.path.exists(base_dir) else False,
     }
     
+    # Add directory permission info
+    base_dir = os.environ.get("BASE_DIR", "/data")
+    dir_info = {
+        'base_dir': base_dir,
+        'exists': os.path.exists(base_dir),
+        'writable': os.access(base_dir, os.W_OK) if os.path.exists(base_dir) else False,
+    }
+    
     # Return combined status
     return jsonify({
         'status': 'ok',
         'timestamp': time.time(),
         'system': system_info,
+        'application': app_info,
+        'directories': dir_info
         'application': app_info,
         'directories': dir_info
     })
@@ -291,6 +301,9 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
     strip_emojis = download_tasks[task_id].get('strip_emojis', False)
     incremental = download_tasks[task_id].get('incremental', False)
     folder_pattern = download_tasks[task_id].get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
+    strip_emojis = download_tasks[task_id].get('strip_emojis', False)
+    incremental = download_tasks[task_id].get('incremental', False)
+    folder_pattern = download_tasks[task_id].get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
     
     try:
         GoFile().execute(
@@ -299,6 +312,8 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
             name_callback=name_cb, overall_progress_callback=overall_progress_callback,
             start_time=start_time, file_progress_callback=file_progress_callback,
             pause_callback=pause_callback, throttle_speed=throttle_speed,
+            retry_attempts=retry_attempts, strip_emojis=strip_emojis,
+            incremental=incremental, folder_pattern=folder_pattern
             retry_attempts=retry_attempts, strip_emojis=strip_emojis,
             incremental=incremental, folder_pattern=folder_pattern
         )
@@ -319,7 +334,26 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
             download_tasks[task_id]['status'] = "cancelled"
         else:
             download_tasks[task_id]['status'] = "error"
+    except PermissionError as e:
+        error_msg = f"Permission denied: {str(e)}. Check that the output directory has correct permissions (should be writable by UID {os.getuid()})."
+        print(f"Task {task_id} permission error: {error_msg}")
+        download_tasks[task_id]['error_message'] = error_msg
+        if cancel_event.is_set():
+            download_tasks[task_id]['status'] = "cancelled"
+        else:
+            download_tasks[task_id]['status'] = "error"
+    except OSError as e:
+        error_msg = f"Filesystem error: {str(e)}. This may be a Docker volume mount issue or disk space problem."
+        print(f"Task {task_id} filesystem error: {error_msg}")
+        download_tasks[task_id]['error_message'] = error_msg
+        if cancel_event.is_set():
+            download_tasks[task_id]['status'] = "cancelled"
+        else:
+            download_tasks[task_id]['status'] = "error"
     except Exception as e:
+        error_msg = str(e)
+        print(f"Task {task_id} error: {error_msg}")
+        download_tasks[task_id]['error_message'] = error_msg
         error_msg = str(e)
         print(f"Task {task_id} error: {error_msg}")
         download_tasks[task_id]['error_message'] = error_msg
@@ -413,6 +447,15 @@ def start_download():
     # Get custom folder pattern for incremental mode
     folder_pattern = request.form.get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
     
+    # Get emoji stripping option
+    strip_emojis = request.form.get('strip_emojis') == 'true'
+    
+    # Get incremental mode option
+    incremental = request.form.get('incremental') == 'true'
+    
+    # Get custom folder pattern for incremental mode
+    folder_pattern = request.form.get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
+    
     if not url:
         return jsonify({"error": "URL is required"}), 400
     
@@ -436,6 +479,10 @@ def start_download():
         'name': name,
         'paused': False,
         'throttle': throttle,
+        'retries': retries,
+        'strip_emojis': strip_emojis,
+        'incremental': incremental,
+        'folder_pattern': folder_pattern
         'retries': retries,
         'strip_emojis': strip_emojis,
         'incremental': incremental,
