@@ -49,6 +49,11 @@ This application has been updated to work with GoFile's latest API changes:
 
 - Download speed limiting/throttling
 - Configurable retry attempts for failed downloads
+- **Emoji stripping option** for Linux CLI compatibility (removes emojis from folder/file names)
+- **Incremental/Sync mode** - Only download new files, skip existing ones
+  - Perfect for ongoing series with "NEW FILES in" folders
+  - Automatically handles folder renames (e.g., "⭐NEW FILES in Show S1" → "Show S1")
+  - Tracks downloaded files to avoid re-downloading
 - Pause/resume downloads
 - File size information display
 - Task management (cancel, delete files, remove from list)
@@ -98,10 +103,12 @@ services:
       - "2355:2355"
     volumes:
       - ./downloads:/data
+      - ./config:/config
     environment:
       - PORT=2355
       - HOST=0.0.0.0
       - BASE_DIR=/data
+      - CONFIG_DIR=/config
       - SECRET_KEY=change-this-to-a-random-string-in-production
       # Uncomment to enable authentication
       # - AUTH_ENABLED=true
@@ -133,6 +140,7 @@ docker-compose up -d
 | `PORT`            | Web server port                | `2355`                    | `8080`            |
 | `HOST`            | Web server host                | `0.0.0.0`                 | `127.0.0.1`       |
 | `BASE_DIR`        | Base directory for downloads   | `/app`                    | `/downloads`      |
+| `CONFIG_DIR`      | Directory for config/tracking  | `/config`                 | `/app/config`     |
 | `SECRET_KEY`      | Flask secret key for sessions  | Random value              | `my-secret-key`   |
 | `DEBUG`           | Enable Flask debug mode        | `false`                   | `true`            |
 | `AUTH_ENABLED`    | Enable basic authentication    | `false`                   | `true`            |
@@ -146,6 +154,7 @@ docker-compose up -d
 GoFile Downloader uses the following volumes:
 
 - `/data`: Main storage location for downloaded files
+- `/config`: Persistent storage for download tracking files (incremental mode)
 
 ### Security Best Practices
 
@@ -169,10 +178,12 @@ services:
     image: ghcr.io/martadams89/gofile-dl:latest
     volumes:
       - ./downloads:/data
+      - ./config:/config
     environment:
       - AUTH_ENABLED=true
       - AUTH_USERNAME=admin
       - AUTH_PASSWORD=secure-password
+      - CONFIG_DIR=/config
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.gofile.rule=Host(`gofile.example.com`)"
@@ -197,8 +208,10 @@ services:
     image: ghcr.io/martadams89/gofile-dl:latest
     volumes:
       - ./downloads:/data
+      - ./config:/config
     environment:
       - PORT=2355
+      - CONFIG_DIR=/config
     deploy:
       resources:
         limits:
@@ -259,6 +272,7 @@ Example health check response:
    - Check the volume mounting: `docker inspect gofile-dl`
    - Verify the BASE_DIR environment variable is set correctly
    - Check directory permissions
+   - **Permission denied errors**: Ensure the mounted directory is writable by UID 1000 (default container user)
 
 4. **Authentication issues**
    - Ensure AUTH_ENABLED is set to "true" (case-sensitive)
@@ -293,6 +307,85 @@ The test script verifies:
 - WebsiteToken (wt) extraction from config.js
 - Content access with proper authentication
 - Nested folder structure retrieval
+
+## Use Case: Tracking Ongoing Series with Incremental Mode
+
+The incremental/sync mode is perfect for content that updates regularly, such as TV series, podcast archives, or any collection that receives periodic updates.
+
+### Why Use Incremental Mode?
+
+When downloading from ongoing series or regularly updated folders:
+- Avoid re-downloading files you already have
+- Save bandwidth and time
+- Keep your local copy synchronized with the remote folder
+- Handle folder renames automatically (common with "NEW FILES" prefixes)
+
+### How It Works
+
+1. **Initial Download**: Download the entire folder structure
+   - Enable "Incremental/Sync mode" checkbox in the web UI
+   - Or use `incremental=true` via API/curl
+
+2. **Subsequent Updates**: Run the same download again
+   - Only NEW files are downloaded
+   - Previously downloaded files are automatically skipped
+   - Handles folder renames with customizable pattern matching
+   - Default patterns strip: `⭐NEW FILES in`, `NEW FILES in`, `⭐`
+
+3. **Behind the Scenes**:
+   - Creates persistent tracking file: `.gofile_tracker_<contentId>.json` in `/config`
+   - Stores list of downloaded file IDs and names
+   - Matches folders even when renamed using pattern normalization
+   - Logs all skipped files for visibility
+
+### Customizing Folder Patterns
+
+Different uploaders use different naming conventions. You can customize the patterns to match your specific use case:
+
+1. **Via Web UI**: 
+   - Click "Advanced Options" to reveal pattern configuration
+   - Enter pipe-separated patterns: `⭐NEW FILES in |NEW FILES in |⭐`
+
+2. **Via API/curl**:
+   ```bash
+   curl -X POST http://localhost:2355/start \
+     -d "url=https://gofile.io/d/abc123" \
+     -d "incremental=true" \
+     -d "folder_pattern=UPDATED |⭐NEW |*NEW FILES in "
+   ```
+
+3. **Pattern Examples**:
+   - `⭐NEW FILES in |NEW FILES in |⭐` (default) matches:
+     - `⭐NEW FILES in Show S1 [10]` → `Show S1 [10]`
+     - `NEW FILES in Episode Pack` → `Episode Pack`
+   - `UPDATED |⭐NEW |*NEW FILES in ` matches:
+     - `UPDATED Show S1` → `Show S1`
+     - `⭐NEW Episode Pack` → `Episode Pack`
+     - `*NEW FILES in Series` → `Series`
+
+### Example Workflow
+
+```bash
+# Week 1: Initial download - gets everything
+docker-compose exec gofile-dl curl -X POST http://localhost:2355/start \
+  -d "url=https://gofile.io/d/abc123" \
+  -d "incremental=true" \
+  -d "folder_pattern=⭐NEW FILES in |NEW FILES in |⭐"
+
+# Week 2: Update download - only new episodes
+# Same command - automatically skips existing files!
+docker-compose exec gofile-dl curl -X POST http://localhost:2355/start \
+  -d "url=https://gofile.io/d/abc123" \
+  -d "incremental=true" \
+  -d "folder_pattern=⭐NEW FILES in |NEW FILES in |⭐"
+```
+
+### Important Notes
+
+- Tracking files are stored in `/config` directory - **ensure this volume is mounted** in your docker-compose.yml
+- Delete the tracking file `.gofile_tracker_<contentId>.json` to force a complete re-download
+- The tracking is per content ID, so different GoFile folders are tracked separately
+- Progress shown in the UI is per-subfolder, allowing you to see which folder is currently being processed
 
 ## License
 
