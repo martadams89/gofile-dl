@@ -2,22 +2,39 @@
 
 **Note: This project began as a fork of [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl) but has since evolved into a completely rebuilt application with a different architecture and extensive new features.**
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![Python](https://img.shields.io/badge/python-3.7%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-active-success)
 
 A powerful, modern web application and CLI tool for downloading files and folders from GoFile.io links. Featuring a responsive web interface, task management, progress tracking, and Docker support.
 
 _Originally inspired by [rkwyu/gofile-dl](https://github.com/rkwyu/gofile-dl) but completely rebuilt with extensive enhancements and a modern architecture._
+
+## Important Notes
+
+### GoFile API Compatibility (January 2026)
+
+This application has been updated to work with GoFile's latest API changes:
+
+- ✅ **Updated Authentication**: Uses `X-Website-Token` header for API access
+- ✅ **Nested Folders**: Full support for deeply nested folder structures with UUID-based IDs
+- ✅ **Special Characters**: Properly handles emoji and special characters in folder names
+- ✅ **Password Protection**: Supports SHA-256 password hashing for protected content
+- ✅ **Recursive Downloads**: Automatically traverses and downloads all subfolders
+
+**Note**: The GoFile API structure changed in early 2026. This version includes all necessary updates to maintain compatibility.
 
 ## Features
 
 ### Core Functionality
 
 - Download individual files or entire folder structures from GoFile.io links
-- Support for password-protected content
+- **Full recursive support** for nested subfolders (including UUID-based and short-form IDs)
+- **Password-protected content** with SHA-256 hash authentication
+- **Smart folder handling** with automatic emoji and special character sanitization
 - CLI and web interface options
-- Automatic retry on failed downloads
+- Automatic retry on failed downloads with configurable attempts
 
 ### Web Interface
 
@@ -247,6 +264,35 @@ Example health check response:
    - Ensure AUTH_ENABLED is set to "true" (case-sensitive)
    - Verify username and password are correctly set
    - Clear browser cache and cookies
+
+5. **GoFile download errors**
+   - Error "Cannot get wt": GoFile may have updated their JavaScript structure. Check for application updates.
+   - Error "API error: error-notPremium": Ensure you're using the latest version with `X-Website-Token` header support
+   - Nested folders not downloading: Verify you're providing the top-level folder URL, not individual file links
+   - Special characters in filenames: These are automatically sanitized - check the `downloads` folder for the converted names
+
+## Testing
+
+### Running Tests
+
+A test script is provided to verify GoFile connectivity:
+
+```bash
+# Test with environment variables
+export GOFILE_TEST_URL="https://gofile.io/d/YOUR_CONTENT_ID"
+export GOFILE_TEST_PASSWORD="your_password"  # Optional, only if content is password-protected
+python test_gofile_api.py
+
+# Or test directly with arguments
+python test_gofile_api.py --url "https://gofile.io/d/YOUR_CONTENT_ID" --password "your_password"
+```
+
+The test script verifies:
+
+- Token acquisition from GoFile API
+- WebsiteToken (wt) extraction from config.js
+- Content access with proper authentication
+- Nested folder structure retrieval
 
 ## License
 
