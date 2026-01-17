@@ -256,7 +256,7 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
                 f.write('test')
             os.remove(test_file)
         except (IOError, OSError) as e:
-            error_msg = f"Output directory '{output_dir}' is not writable. Check Docker volume permissions and ensure the directory is mounted correctly."
+            error_msg = f"Output directory '{output_dir}' is not writable: {str(e)}. Check Docker volume permissions and ensure the directory is mounted correctly."
             print(f"Task {task_id} permission error: {error_msg}")
             download_tasks[task_id]['error_message'] = error_msg
             download_tasks[task_id]['status'] = "error"
