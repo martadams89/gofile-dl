@@ -635,10 +635,10 @@
             // Update dashboard
             updateDashboard(tasksData);
             const panel = document.getElementById("tasks-panel");
-            
+
             // Save current scroll position
             const scrollTop = panel.scrollTop;
-            
+
             panel.innerHTML = "";
             const now = Date.now() / 1000; // seconds
             const filterDays = getFilterDays();
@@ -651,7 +651,7 @@
                 );
               },
             );
-            
+
             // Sort by timestamp descending (newest first)
             filteredTasks.sort((a, b) => b[1].timestamp - a[1].timestamp);
             // If grouping is enabled
@@ -773,7 +773,7 @@
               `;
               panel.appendChild(emptyState);
             }
-            
+
             // Restore scroll position
             panel.scrollTop = scrollTop;
           });
@@ -846,10 +846,10 @@
         if (info.files && info.files.length > 0) {
           const filesList = document.createElement("div");
           filesList.className = "task-file-list mb-3";
-          
+
           // Build hierarchical tree structure
           const fileTree = {};
-          
+
           info.files.forEach((f) => {
             // Get relative path
             let displayPath = f.file;
@@ -858,35 +858,35 @@
                 .replace(info.directory, "")
                 .replace(/^\/+/, "");
             }
-            
+
             const pathParts = displayPath.split("/");
             const fileName = pathParts.pop();
             const folderPath = pathParts.join("/");
-            
+
             // Create folder entry if doesn't exist
             if (!fileTree[folderPath]) {
               fileTree[folderPath] = [];
             }
-            
+
             // Add file to folder
             fileTree[folderPath].push({
               name: fileName,
               progress: f.progress,
-              size: f.size
+              size: f.size,
             });
           });
-          
+
           // Sort folders (root first, then alphabetically)
           const sortedFolders = Object.keys(fileTree).sort((a, b) => {
             if (a === "") return -1;
             if (b === "") return 1;
             return a.localeCompare(b);
           });
-          
+
           // Display hierarchical structure
           sortedFolders.forEach((folderPath) => {
             const files = fileTree[folderPath];
-            
+
             // Display folder header if not root
             if (folderPath !== "") {
               const folderHeader = document.createElement("div");
@@ -894,13 +894,13 @@
               folderHeader.innerHTML = `<i class="bi bi-folder me-1"></i>${folderPath}`;
               filesList.appendChild(folderHeader);
             }
-            
+
             // Display files in this folder
             files.forEach((file) => {
               const fileSize = file.size
                 ? ` <span class="file-size">${formatFileSize(file.size)}</span>`
                 : "";
-              
+
               const fileDiv = document.createElement("div");
               fileDiv.className = "ms-4 mb-1";
               fileDiv.innerHTML = `
@@ -916,7 +916,7 @@
               filesList.appendChild(fileDiv);
             });
           });
-          
+
           body.appendChild(filesList);
         }
         // Controls section
