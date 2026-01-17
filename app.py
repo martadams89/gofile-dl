@@ -480,10 +480,6 @@ def start_download():
         'strip_emojis': strip_emojis,
         'incremental': incremental,
         'folder_pattern': folder_pattern
-        'retries': retries,
-        'strip_emojis': strip_emojis,
-        'incremental': incremental,
-        'folder_pattern': folder_pattern
     }
     
     thread = threading.Thread(target=download_task, args=(url, directory, password, task_id))
