@@ -2,11 +2,10 @@
 
 ## [1.6.1](https://github.com/martadams89/gofile-dl/compare/v1.6.0...v1.6.1) (2026-01-18)
 
-
 ### Bug Fixes
 
-* fix duplicate lines ([4074cfe](https://github.com/martadams89/gofile-dl/commit/4074cfeb1794eee264c18c4a885a28dbbf732b81))
-* fix duplicate lines ([391e8c1](https://github.com/martadams89/gofile-dl/commit/391e8c1368494334bdcae3e951316be3d132e611))
+- fix duplicate lines ([4074cfe](https://github.com/martadams89/gofile-dl/commit/4074cfeb1794eee264c18c4a885a28dbbf732b81))
+- fix duplicate lines ([391e8c1](https://github.com/martadams89/gofile-dl/commit/391e8c1368494334bdcae3e951316be3d132e611))
 
 ## [1.6.0](https://github.com/martadams89/gofile-dl/compare/v1.5.0...v1.6.0) (2026-01-18)
 
