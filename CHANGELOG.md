@@ -1,20 +1,5 @@
 # Changelog
 
-## [1.6.0](https://github.com/martadams89/gofile-dl/compare/v1.5.0...v1.6.0) (2026-01-18)
-
-### Features
-
-- update changelog for version 1.5.0 and add incremental sync mode with emoji stripping options ([ae69bdb](https://github.com/martadams89/gofile-dl/commit/ae69bdbd387c5c66e2755989c3ee4696c1b7f570))
-
-### Bug Fixes
-
-- clean up file display logic by removing redundant code and improving readability ([0668f06](https://github.com/martadams89/gofile-dl/commit/0668f069b25221eb3eb795882d3112258e187cb8))
-- enhance task display with hierarchical file structure and scroll position restoration ([64b3af1](https://github.com/martadams89/gofile-dl/commit/64b3af174e426cf753c287e6d86f496c3a9258b1))
-- remove duplicate keys in health check response ([f59e5f0](https://github.com/martadams89/gofile-dl/commit/f59e5f05b259f95960fb535ec2383aea7e0dc2c9))
-- remove redundant parameters from download_task function call ([52251ff](https://github.com/martadams89/gofile-dl/commit/52251ffb33bc82837f8c95811e30a903dd928f04))
-- remove redundant parameters from start_download function ([f15fb15](https://github.com/martadams89/gofile-dl/commit/f15fb153cff852919693e13ceea3a7aa2a752f1f))
-- update download task progress display to include current folder and download speed ([c7c87fe](https://github.com/martadams89/gofile-dl/commit/c7c87fe496226eebc383ca62e9cec3190c3ea511))
-
 ## [1.5.0](https://github.com/martadams89/gofile-dl/compare/v1.4.0...v1.5.0) (2026-01-17)
 
 ### Features
