@@ -331,22 +331,6 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
             download_tasks[task_id]['status'] = "cancelled"
         else:
             download_tasks[task_id]['status'] = "error"
-    except PermissionError as e:
-        error_msg = f"Permission denied: {str(e)}. Check that the output directory has correct permissions (should be writable by UID {os.getuid()})."
-        print(f"Task {task_id} permission error: {error_msg}")
-        download_tasks[task_id]['error_message'] = error_msg
-        if cancel_event.is_set():
-            download_tasks[task_id]['status'] = "cancelled"
-        else:
-            download_tasks[task_id]['status'] = "error"
-    except OSError as e:
-        error_msg = f"Filesystem error: {str(e)}. This may be a Docker volume mount issue or disk space problem."
-        print(f"Task {task_id} filesystem error: {error_msg}")
-        download_tasks[task_id]['error_message'] = error_msg
-        if cancel_event.is_set():
-            download_tasks[task_id]['status'] = "cancelled"
-        else:
-            download_tasks[task_id]['status'] = "error"
     except Exception as e:
         error_msg = str(e)
         print(f"Task {task_id} error: {error_msg}")
