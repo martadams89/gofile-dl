@@ -14,7 +14,7 @@ PyYAML>=6.0.1
 psutil>=5.9.8
 
 # Security
-certifi==2026.1.4
+certifi==2026.2.25
 charset-normalizer==3.4.4
 idna==3.11
 urllib3==2.6.3
