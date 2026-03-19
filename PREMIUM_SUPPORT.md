@@ -1,9 +1,11 @@
 # Premium Account Token Support - Implementation Guide
 
 ## Overview
+
 Added support for GoFile premium account tokens to bypass the `error-notPremium` API restrictions introduced in March 2026.
 
 ## Why This Feature?
+
 - GoFile now restricts the `/contents/{id}` API endpoint to premium accounts
 - Free accounts use a web scraping fallback which is slower
 - Premium users can now use their account tokens for direct, faster API access
@@ -14,6 +16,7 @@ Added support for GoFile premium account tokens to bypass the `error-notPremium`
 ### 1. Core GoFile Class (`run.py`)
 
 #### Modified `__init__` method:
+
 ```python
 def __init__(self, premium_token: Optional[str] = None) -> None:
     self.token: str = ""
@@ -23,11 +26,13 @@ def __init__(self, premium_token: Optional[str] = None) -> None:
 ```
 
 #### Updated `update_token()` method:
+
 - Checks if premium token is provided
 - Uses premium token instead of creating guest account
 - Logs when using premium account
 
 #### Enhanced error handling in `execute()`:
+
 - Detects if premium token was provided but still got error-notPremium
 - Provides specific error message for invalid premium tokens
 - Falls back to web scraping only for free accounts
@@ -35,6 +40,7 @@ def __init__(self, premium_token: Optional[str] = None) -> None:
 ### 2. Configuration Support (`app.py`)
 
 #### Added to default config:
+
 ```python
 DEFAULT_CONFIG = {
     # ... other config ...
@@ -43,6 +49,7 @@ DEFAULT_CONFIG = {
 ```
 
 #### Environment variable support:
+
 ```python
 config["premium_token"] = get_env_var("GOFILE_PREMIUM_TOKEN", config.get("premium_token"))
 ```
@@ -50,6 +57,7 @@ config["premium_token"] = get_env_var("GOFILE_PREMIUM_TOKEN", config.get("premiu
 ### 3. Web Interface (`templates/index.html`)
 
 Added premium token field in the Advanced Options section:
+
 - Password input field for security
 - Icon indicator (⭐) for premium feature
 - Helper text with link to GoFile profile page
@@ -60,17 +68,20 @@ Location: Under "Advanced Options" collapsible section
 ### 4. Download Task Integration (`app.py`)
 
 #### Modified `start_download()`:
+
 - Accepts premium token from form
 - Overrides config token if provided in form
 - Passes token to download task
 
 #### Modified `download_task()`:
+
 - Retrieves premium token from task config or global config
 - Passes token to GoFile instance
 
 ### 5. Documentation (`README.md`)
 
 Added comprehensive section:
+
 - "Premium Account Support" section with benefits
 - Instructions for three configuration methods
 - Environment variable in docker-compose example
@@ -79,24 +90,28 @@ Added comprehensive section:
 ## Usage Examples
 
 ### Method 1: Environment Variable (Docker)
+
 ```yaml
 environment:
   - GOFILE_PREMIUM_TOKEN=your-premium-token-here
 ```
 
 ### Method 2: Config File
+
 ```yaml
 # config.yml
 premium_token: "your-premium-token-here"
 ```
 
 ### Method 3: Web Interface
+
 1. Start a download
 2. Click "Advanced Options"
 3. Enter token in "GoFile Premium Account Token" field
 4. Submit download
 
 ### Method 4: CLI (programmatic)
+
 ```python
 from run import GoFile
 
@@ -121,6 +136,7 @@ gofile.execute(dir="./downloads", url="https://gofile.io/d/abc123")
 ## Priority System
 
 The token is selected in this priority order:
+
 1. Token entered in web UI form (per-download)
 2. Token from environment variable `GOFILE_PREMIUM_TOKEN`
 3. Token from `config.yml`
@@ -129,14 +145,18 @@ The token is selected in this priority order:
 ## Error Handling
 
 ### Invalid Premium Token
+
 If a premium token is provided but the API still returns `error-notPremium`:
+
 ```
 [ERROR] Premium account returned error-notPremium. Check if token is valid.
 [ERROR] API error: {'status': 'error-notPremium', 'data': {}}
 ```
 
 ### No Premium Token
+
 If no premium token is provided:
+
 - Creates guest account automatically
 - Uses web scraping fallback if needed
 - No change in behavior from previous version
@@ -146,15 +166,19 @@ If no premium token is provided:
 To test premium token support:
 
 1. **With valid premium token**:
+
    ```bash
    GOFILE_PREMIUM_TOKEN=your-token python3 run.py https://gofile.io/d/abc123 -d ./downloads
    ```
+
    Expected: Direct API access, no fallback
 
 2. **Without premium token**:
+
    ```bash
    python3 run.py https://gofile.io/d/abc123 -d ./downloads
    ```
+
    Expected: Guest account, web fallback if needed
 
 3. **With invalid premium token**:
@@ -179,7 +203,7 @@ To test premium token support:
 
 ## Files Modified
 
-1. **run.py**: 
+1. **run.py**:
    - Added `premium_token` parameter to `__init__`
    - Modified `update_token()` logic
    - Enhanced error handling in `execute()`
@@ -202,6 +226,7 @@ To test premium token support:
 ## Backwards Compatibility
 
 ✅ **Fully backwards compatible**
+
 - Works without any premium token (uses guest account)
 - No breaking changes to existing functionality
 - All existing features continue to work
@@ -210,6 +235,7 @@ To test premium token support:
 ## Future Enhancements
 
 Potential improvements:
+
 1. Token validation endpoint
 2. Token refresh mechanism
 3. Multiple token support (fallback tokens)
