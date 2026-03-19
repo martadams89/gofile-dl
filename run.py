@@ -16,7 +16,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("GoFile")
 
-DEFAULT_TIMEOUT = 10  # 10 seconds
+DEFAULT_TIMEOUT = 30  # 30 seconds - increased for slower connections
+CONTENT_TIMEOUT = 45  # 45 seconds - for content API requests that may be slower
 
 def strip_emojis_func(text: str) -> str:
     """
@@ -265,13 +266,26 @@ class GoFile(metaclass=GoFileMeta):
                 self.token = self.premium_token
                 logger.info(f"Using premium account token: {self.token[:20]}...")
             else:
-                # Create guest account
-                data = requests.post("https://api.gofile.io/accounts", timeout=DEFAULT_TIMEOUT).json()
-                if data.get("status") == "ok":
-                    self.token = data["data"].get("token", "")
-                    logger.info(f"Updated token: {self.token}")
-                else:
-                    logger.error("Cannot get token")
+                # Create guest account with retry logic
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        data = requests.post("https://api.gofile.io/accounts", timeout=DEFAULT_TIMEOUT).json()
+                        if data.get("status") == "ok":
+                            self.token = data["data"].get("token", "")
+                            logger.info(f"Updated token: {self.token}")
+                            break
+                        else:
+                            logger.error("Cannot get token")
+                    except requests.exceptions.Timeout:
+                        if attempt < max_retries - 1:
+                            logger.warning(f"Token request timed out, retrying ({attempt + 1}/{max_retries})...")
+                            time.sleep(2)
+                        else:
+                            logger.error("Failed to get token after multiple attempts due to timeout")
+                    except Exception as e:
+                        logger.error(f"Error getting token: {e}")
+                        break
     
     def update_wt(self) -> None:
         """
@@ -324,7 +338,7 @@ class GoFile(metaclass=GoFileMeta):
             }
             
             # Step 1: Visit the page to get any session cookies
-            response = session.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
+            response = session.get(url, headers=headers, timeout=CONTENT_TIMEOUT)
             response.raise_for_status()
             
             # Step 2: Try to make API request with the session cookies
@@ -349,7 +363,7 @@ class GoFile(metaclass=GoFileMeta):
                 f"https://api.gofile.io/contents/{content_id}",
                 headers=api_headers,
                 params=params,
-                timeout=DEFAULT_TIMEOUT
+                timeout=CONTENT_TIMEOUT
             )
             
             data = api_response.json()
@@ -447,19 +461,36 @@ class GoFile(metaclass=GoFileMeta):
                 hash_password = hashlib.sha256(password.encode()).hexdigest()
                 params['password'] = hash_password
             
-            try:
-                response = requests.get(
-                    f"https://api.gofile.io/contents/{content_id}",
-                    headers={
-                        "Authorization": "Bearer " + self.token,
-                        "X-Website-Token": self.wt
-                    },
-                    params=params,
-                    timeout=DEFAULT_TIMEOUT
-                )
-                data = response.json()
-            except Exception as e:
-                logger.error(f"Failed to fetch content {content_id}: {e}")
+            # Try API request with retry on timeout
+            max_retries = 3
+            data = None
+            for attempt in range(max_retries):
+                try:
+                    response = requests.get(
+                        f"https://api.gofile.io/contents/{content_id}",
+                        headers={
+                            "Authorization": "Bearer " + self.token,
+                            "X-Website-Token": self.wt
+                        },
+                        params=params,
+                        timeout=CONTENT_TIMEOUT  # Use longer timeout for content requests
+                    )
+                    data = response.json()
+                    break  # Success, exit retry loop
+                except requests.exceptions.Timeout:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Content request timed out, retrying ({attempt + 1}/{max_retries})...")
+                        time.sleep(3)  # Wait before retry
+                    else:
+                        logger.error(f"Failed to fetch content {content_id} after {max_retries} attempts due to timeout")
+                        logger.error("GoFile's API may be slow or overloaded. Try again later.")
+                        return
+                except Exception as e:
+                    logger.error(f"Failed to fetch content {content_id}: {e}")
+                    return
+            
+            if data is None:
+                logger.error(f"No data received for content {content_id}")
                 return
             
             # Check for API errors

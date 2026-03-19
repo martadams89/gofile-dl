@@ -327,6 +327,7 @@ Example health check response:
 5. **GoFile download errors**
    - Error "Cannot get wt": GoFile may have updated their JavaScript structure. Check for application updates.
    - **Error "API error: error-notPremium"**: This is expected as of March 2026. GoFile now restricts the API to premium accounts. The application automatically falls back to a web-based method to retrieve content. If you see this error followed by "Successfully retrieved content via web fallback", everything is working correctly.
+   - **Timeout errors (Read timed out)**: GoFile's API may be slow or overloaded. The app now uses 30-45 second timeouts and automatically retries 3 times. If timeouts persist, wait a few minutes and try again.
    - If web fallback fails: This may indicate GoFile has further changed their interface. Please check for updates or report the issue on GitHub.
    - Nested folders not downloading: Verify you're providing the top-level folder URL, not individual file links
    - Special characters in filenames: These are automatically sanitized - check the `downloads` folder for the
