@@ -2,11 +2,10 @@
 
 ## [1.7.1](https://github.com/martadams89/gofile-dl/compare/v1.7.0...v1.7.1) (2026-03-19)
 
-
 ### Bug Fixes
 
-* Improve timeout handling and retry logic for API requests ([c16666c](https://github.com/martadams89/gofile-dl/commit/c16666c660bedf1b98c63cd395a8c52a6ef8ead2))
-* Improve timeout handling and retry logic for API requests ([1b94def](https://github.com/martadams89/gofile-dl/commit/1b94def8fcece24f0ef319a9690a4bc360ea4009))
+- Improve timeout handling and retry logic for API requests ([c16666c](https://github.com/martadams89/gofile-dl/commit/c16666c660bedf1b98c63cd395a8c52a6ef8ead2))
+- Improve timeout handling and retry logic for API requests ([1b94def](https://github.com/martadams89/gofile-dl/commit/1b94def8fcece24f0ef319a9690a4bc360ea4009))
 
 ## [1.7.0](https://github.com/martadams89/gofile-dl/compare/v1.6.1...v1.7.0) (2026-03-19)
 
