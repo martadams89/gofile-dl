@@ -316,6 +316,34 @@
             </button>
             <div class="collapse mt-3" id="advancedOptions">
               <div class="card card-body">
+                <div class="mb-3">
+                  <label for="premium_token" class="form-label">
+                    <i class="bi bi-star-fill text-warning"></i> GoFile Premium
+                    Account Token
+                  </label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="premium_token"
+                    name="premium_token"
+                    placeholder="Leave empty for free account"
+                  />
+                  <div class="form-text">
+                    <strong>Optional:</strong> If you have a GoFile premium
+                    account, enter your account token here. This bypasses the
+                    free account restrictions and provides faster, more reliable
+                    downloads.
+                    <br />
+                    <small class="text-muted"
+                      >You can find your token in your GoFile account settings
+                      at
+                      <a href="https://gofile.io/myProfile" target="_blank"
+                        >gofile.io/myProfile</a
+                      ></small
+                    >
+                  </div>
+                </div>
+                <hr />
                 <label for="folder_pattern" class="form-label">
                   Folder Name Pattern to Strip (for Incremental mode)
                 </label>
