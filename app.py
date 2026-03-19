@@ -65,6 +65,7 @@ DEFAULT_CONFIG = {
     "default_retries": 3,
     "retry_delay": 5,
     "log_level": "INFO",
+    "premium_token": None,  # Optional: Premium account token
     "auth": {
         "enabled": False,
         "username": "admin",
@@ -106,6 +107,7 @@ config["port"] = get_env_var("PORT", config["port"], False, int)
 config["host"] = get_env_var("HOST", config["host"])
 config["base_dir"] = get_env_var("BASE_DIR", config["base_dir"])
 config["secret_key"] = get_env_var("SECRET_KEY", config["secret_key"])
+config["premium_token"] = get_env_var("GOFILE_PREMIUM_TOKEN", config.get("premium_token"))
 
 # Safe access to nested config values
 auth_enabled = config["auth"].get("enabled", DEFAULT_CONFIG["auth"]["enabled"])
@@ -304,8 +306,11 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
     incremental = download_tasks[task_id].get('incremental', False)
     folder_pattern = download_tasks[task_id].get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
     
+    # Get premium token from config
+    premium_token = config.get('premium_token')
+    
     try:
-        GoFile().execute(
+        GoFile(premium_token=premium_token).execute(
             dir=output_dir, url=url, password=password,
             progress_callback=progress_callback, cancel_event=cancel_event,
             name_callback=name_cb, overall_progress_callback=overall_progress_callback,
@@ -428,6 +433,10 @@ def start_download():
     # Get custom folder pattern for incremental mode
     folder_pattern = request.form.get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
     
+    # Get premium token (if provided via form, override config)
+    premium_token_form = request.form.get('premium_token', '').strip()
+    premium_token = premium_token_form if premium_token_form else config.get('premium_token')
+    
     # Get emoji stripping option
     strip_emojis = request.form.get('strip_emojis') == 'true'
     
@@ -463,7 +472,8 @@ def start_download():
         'retries': retries,
         'strip_emojis': strip_emojis,
         'incremental': incremental,
-        'folder_pattern': folder_pattern
+        'folder_pattern': folder_pattern,
+        'premium_token': premium_token
     }
     
     thread = threading.Thread(target=download_task, args=(url, directory, password, task_id))

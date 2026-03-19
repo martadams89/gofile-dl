@@ -221,10 +221,17 @@ class GoFile(metaclass=GoFileMeta):
     Uses a Singleton pattern to ensure only one instance is created.
     """
     
-    def __init__(self) -> None:
-        """Initialize the GoFile client with empty token and wt."""
+    def __init__(self, premium_token: Optional[str] = None) -> None:
+        """Initialize the GoFile client with empty token and wt.
+        
+        Args:
+            premium_token: Optional premium account token. If provided, uses premium
+                         account instead of creating guest account.
+        """
         self.token: str = ""
         self.wt: str = ""
+        self.premium_token: Optional[str] = premium_token
+        self.is_premium: bool = premium_token is not None
     
     def count_files(self, children: Dict[str, Dict]) -> int:
         """
@@ -250,15 +257,21 @@ class GoFile(metaclass=GoFileMeta):
         """
         Update the access token used for API requests.
         
-        Makes a request to GoFile's accounts API to get a fresh token.
+        If premium token is provided, uses that. Otherwise, creates a guest account.
         """
         if self.token == "":
-            data = requests.post("https://api.gofile.io/accounts", timeout=DEFAULT_TIMEOUT).json()
-            if data.get("status") == "ok":
-                self.token = data["data"].get("token", "")
-                logger.info(f"Updated token: {self.token}")
+            # Use premium token if provided
+            if self.premium_token:
+                self.token = self.premium_token
+                logger.info(f"Using premium account token: {self.token[:20]}...")
             else:
-                logger.error("Cannot get token")
+                # Create guest account
+                data = requests.post("https://api.gofile.io/accounts", timeout=DEFAULT_TIMEOUT).json()
+                if data.get("status") == "ok":
+                    self.token = data["data"].get("token", "")
+                    logger.info(f"Updated token: {self.token}")
+                else:
+                    logger.error("Cannot get token")
     
     def update_wt(self) -> None:
         """
@@ -276,6 +289,106 @@ class GoFile(metaclass=GoFileMeta):
                     logger.error("Cannot extract wt from config.js")
             except Exception as e:
                 logger.error(f"Failed to get wt: {e}")
+    
+    def get_content_from_web(self, content_id: str, password: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        Fallback method to extract content information from the GoFile web interface.
+        
+        This is used when the API returns error-notPremium, which indicates that
+        the contents endpoint is restricted to premium accounts.
+        
+        The approach is to:
+        1. Visit the gofile.io/d/{id} page to establish a session
+        2. Extract any tokens/cookies from the page
+        3. Make the API request as the browser would
+        
+        Args:
+            content_id: GoFile content ID
+            password: Optional password for protected content
+            
+        Returns:
+            Content data dictionary similar to API response, or None if failed
+        """
+        try:
+            url = f"https://gofile.io/d/{content_id}"
+            logger.info(f"Attempting web fallback for content: {content_id}")
+            
+            # Create a session to maintain cookies
+            session = requests.Session()
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Referer': 'https://gofile.io/',
+            }
+            
+            # Step 1: Visit the page to get any session cookies
+            response = session.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
+            response.raise_for_status()
+            
+            # Step 2: Try to make API request with the session cookies
+            api_headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Origin': 'https://gofile.io',
+                'Referer': url,
+                'Authorization': f'Bearer {self.token}',
+                'X-Website-Token': self.wt
+            }
+            
+            # Build params
+            params = {}
+            if password:
+                hash_password = hashlib.sha256(password.encode()).hexdigest()
+                params['password'] = hash_password
+            
+            # Try the API call again with browser-like session
+            api_response = session.get(
+                f"https://api.gofile.io/contents/{content_id}",
+                headers=api_headers,
+                params=params,
+                timeout=DEFAULT_TIMEOUT
+            )
+            
+            data = api_response.json()
+            
+            if data.get("status") == "ok":
+                logger.info("Web fallback successful with browser session")
+                return data
+            else:
+                logger.warning(f"Web fallback API call returned: {data.get('status')}")
+                
+                # If still failing, try extracting from page source
+                html_content = response.text
+                import re
+                
+                # Look for embedded content data in various formats
+                patterns = [
+                    r'contentData\s*=\s*({.*?});',
+                    r'var\s+content\s*=\s*({.*?});',
+                    r'window\.contentData\s*=\s*({.*?});',
+                    r'const\s+contentData\s*=\s*({.*?});',
+                ]
+                
+                for pattern in patterns:
+                    matches = re.findall(pattern, html_content, re.DOTALL)
+                    if matches:
+                        try:
+                            content_json = json.loads(matches[0])
+                            logger.info("Extracted content data from page source")
+                            return {"status": "ok", "data": content_json}
+                        except json.JSONDecodeError:
+                            continue
+                
+                return None
+            
+        except Exception as e:
+            logger.error(f"Web fallback failed: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return None
     
     def execute(self, 
                 dir: str, 
@@ -348,9 +461,27 @@ class GoFile(metaclass=GoFileMeta):
             except Exception as e:
                 logger.error(f"Failed to fetch content {content_id}: {e}")
                 return
+            
+            # Check for API errors
             if data.get("status") != "ok":
-                logger.error("API error: %s", data)
-                return
+                # If we get error-notPremium, try web scraping fallback
+                if data.get("status") == "error-notPremium":
+                    if self.is_premium:
+                        logger.error("Premium account returned error-notPremium. Check if token is valid.")
+                        logger.error("API error: %s", data)
+                        return
+                    logger.warning("API returned error-notPremium, attempting web fallback...")
+                    web_data = self.get_content_from_web(content_id, password)
+                    if web_data and web_data.get("status") == "ok":
+                        data = web_data
+                        logger.info("Successfully retrieved content via web fallback")
+                    else:
+                        logger.error("Web fallback failed. Content may require premium account or is inaccessible.")
+                        logger.error("API error: %s", data)
+                        return
+                else:
+                    logger.error("API error: %s", data)
+                    return
             if data["data"].get("passwordStatus", "passwordOk") != "passwordOk":
                 logger.error("Invalid password: %s", data["data"].get("passwordStatus"))
                 return
