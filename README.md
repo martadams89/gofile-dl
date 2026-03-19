@@ -15,17 +15,21 @@ extensive enhancements and a modern architecture._
 
 ## Important Notes
 
-### GoFile API Compatibility (January 2026)
+### GoFile API Compatibility (March 2026 Update)
 
-This application has been updated to work with GoFile's latest API changes:
+**BREAKING CHANGE**: GoFile has restricted their API to premium accounts only as of March 2026.
 
+This application has been updated to work around these restrictions:
+
+- ✅ **Automatic Fallback**: When the API returns `error-notPremium`, the app automatically falls back to web scraping
+- ✅ **Browser Session Emulation**: Uses browser-like requests to access content through the web interface
 - ✅ **Updated Authentication**: Uses `X-Website-Token` header for API access
 - ✅ **Nested Folders**: Full support for deeply nested folder structures with UUID-based IDs
 - ✅ **Special Characters**: Properly handles emoji and special characters in folder names
 - ✅ **Password Protection**: Supports SHA-256 password hashing for protected content
 - ✅ **Recursive Downloads**: Automatically traverses and downloads all subfolders
 
-**Note**: The GoFile API structure changed in early 2026. This version includes all necessary updates to maintain compatibility.
+**Note**: The GoFile API structure has changed significantly. The `/contents/{id}` endpoint now requires premium accounts. This version includes a web-based fallback mechanism to maintain functionality for free users.
 
 ## Features
 
@@ -117,6 +121,8 @@ services:
       # - AUTH_ENABLED=true
       # - AUTH_USERNAME=admin
       # - AUTH_PASSWORD=your-secure-password
+      # Uncomment and add your GoFile premium token to bypass free account restrictions
+      # - GOFILE_PREMIUM_TOKEN=your-premium-token-here
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:2355/health"]
@@ -138,19 +144,51 @@ docker-compose up -d
 
 ### Environment Variables Reference
 
-| Variable          | Description                    | Default                   | Example           |
-| ----------------- | ------------------------------ | ------------------------- | ----------------- |
-| `PORT`            | Web server port                | `2355`                    | `8080`            |
-| `HOST`            | Web server host                | `0.0.0.0`                 | `127.0.0.1`       |
-| `BASE_DIR`        | Base directory for downloads   | `/app`                    | `/downloads`      |
-| `CONFIG_DIR`      | Directory for config/tracking  | `/config`                 | `/app/config`     |
-| `SECRET_KEY`      | Flask secret key for sessions  | Random value              | `my-secret-key`   |
-| `DEBUG`           | Enable Flask debug mode        | `false`                   | `true`            |
-| `AUTH_ENABLED`    | Enable basic authentication    | `false`                   | `true`            |
-| `AUTH_USERNAME`   | Authentication username        | `admin`                   | `user`            |
-| `AUTH_PASSWORD`   | Authentication password        | `change-me-in-production` | `secure-password` |
-| `DEFAULT_RETRIES` | Default retry attempts         | `3`                       | `5`               |
-| `RETRY_DELAY`     | Seconds between retry attempts | `5`                       | `10`              |
+| Variable               | Description                    | Default                   | Example           |
+| ---------------------- | ------------------------------ | ------------------------- | ----------------- |
+| `PORT`                 | Web server port                | `2355`                    | `8080`            |
+| `HOST`                 | Web server host                | `0.0.0.0`                 | `127.0.0.1`       |
+| `BASE_DIR`             | Base directory for downloads   | `/app`                    | `/downloads`      |
+| `CONFIG_DIR`           | Directory for config/tracking  | `/config`                 | `/app/config`     |
+| `SECRET_KEY`           | Flask secret key for sessions  | Random value              | `my-secret-key`   |
+| `DEBUG`                | Enable Flask debug mode        | `false`                   | `true`            |
+| `AUTH_ENABLED`         | Enable basic authentication    | `false`                   | `true`            |
+| `AUTH_USERNAME`        | Authentication username        | `admin`                   | `user`            |
+| `AUTH_PASSWORD`        | Authentication password        | `change-me-in-production` | `secure-password` |
+| `DEFAULT_RETRIES`      | Default retry attempts         | `3`                       | `5`               |
+| `RETRY_DELAY`          | Seconds between retry attempts | `5`                       | `10`              |
+| `GOFILE_PREMIUM_TOKEN` | GoFile premium account token   | `None`                    | `your-token-here` |
+
+### Premium Account Support
+
+If you have a GoFile premium account, you can use your account token to bypass free account restrictions:
+
+**Benefits of using a premium token:**
+- Bypasses `error-notPremium` API restrictions
+- Faster and more reliable downloads
+- No need for web scraping fallback
+- Direct API access
+
+**How to use:**
+
+1. **Find your token**: Log into your GoFile account at [gofile.io/myProfile](https://gofile.io/myProfile) and copy your account token
+
+2. **Configure via environment variable** (Docker):
+   ```yaml
+   environment:
+     - GOFILE_PREMIUM_TOKEN=your-premium-token-here
+   ```
+
+3. **Configure via config.yml** (non-Docker):
+   ```yaml
+   premium_token: "your-premium-token-here"
+   ```
+
+4. **Or enter per-download** in the web interface:
+   - Click "Advanced Options" in the download form
+   - Enter your token in the "GoFile Premium Account Token" field
+
+**Note**: Tokens entered in the web UI override the config/environment variable for that specific download.
 
 ### Docker Volumes
 
@@ -285,11 +323,12 @@ Example health check response:
 
 5. **GoFile download errors**
    - Error "Cannot get wt": GoFile may have updated their JavaScript structure. Check for application updates.
-   - Error "API error: error-notPremium": Ensure you're using the latest version with `X-Website-Token`
-     header support
+   - **Error "API error: error-notPremium"**: This is expected as of March 2026. GoFile now restricts the API to premium accounts. The application automatically falls back to a web-based method to retrieve content. If you see this error followed by "Successfully retrieved content via web fallback", everything is working correctly.
+   - If web fallback fails: This may indicate GoFile has further changed their interface. Please check for updates or report the issue on GitHub.
    - Nested folders not downloading: Verify you're providing the top-level folder URL, not individual file links
    - Special characters in filenames: These are automatically sanitized - check the `downloads` folder for the
      converted names
+   - Rate limiting: GoFile may rate limit API requests. Wait a few minutes and try again.
 
 ## Testing
 
