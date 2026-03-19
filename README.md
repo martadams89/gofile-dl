@@ -164,6 +164,7 @@ docker-compose up -d
 If you have a GoFile premium account, you can use your account token to bypass free account restrictions:
 
 **Benefits of using a premium token:**
+
 - Bypasses `error-notPremium` API restrictions
 - Faster and more reliable downloads
 - No need for web scraping fallback
@@ -174,12 +175,14 @@ If you have a GoFile premium account, you can use your account token to bypass f
 1. **Find your token**: Log into your GoFile account at [gofile.io/myProfile](https://gofile.io/myProfile) and copy your account token
 
 2. **Configure via environment variable** (Docker):
+
    ```yaml
    environment:
      - GOFILE_PREMIUM_TOKEN=your-premium-token-here
    ```
 
 3. **Configure via config.yml** (non-Docker):
+
    ```yaml
    premium_token: "your-premium-token-here"
    ```
