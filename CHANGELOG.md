@@ -2,15 +2,13 @@
 
 ## [1.7.0](https://github.com/martadams89/gofile-dl/compare/v1.6.1...v1.7.0) (2026-03-19)
 
-
 ### Features
 
-* Implement GoFile premium account token support and web fallback for error-notPremium ([06b9f30](https://github.com/martadams89/gofile-dl/commit/06b9f3054bdd60024fc07ed7fe82b6d18373b28b))
-
+- Implement GoFile premium account token support and web fallback for error-notPremium ([06b9f30](https://github.com/martadams89/gofile-dl/commit/06b9f3054bdd60024fc07ed7fe82b6d18373b28b))
 
 ### Bug Fixes
 
-* Implement GoFile premium account token support and web fallback ([1bb2b0a](https://github.com/martadams89/gofile-dl/commit/1bb2b0a566239797010546fb40f224de47be5c1e))
+- Implement GoFile premium account token support and web fallback ([1bb2b0a](https://github.com/martadams89/gofile-dl/commit/1bb2b0a566239797010546fb40f224de47be5c1e))
 
 ## [1.6.1](https://github.com/martadams89/gofile-dl/compare/v1.6.0...v1.6.1) (2026-01-18)
 
