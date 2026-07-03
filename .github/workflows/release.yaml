@@ -1,9 +1,18 @@
 name: Release Please
 on:
-  pull_request:
+  # Run on every push to main. release-please maintains a release PR; when that
+  # PR is merged (another push to main) it cuts the GitHub release + tags and
+  # triggers the Docker publish. This closes the fully-automated loop:
+  #   Renovate merges a dep PR -> push to main -> release PR opened/updated
+  #   -> release PR auto-merged -> push to main -> release published.
+  push:
     branches:
       - "main"
   workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   release-please:
@@ -16,7 +25,27 @@ jobs:
         id: rp
         with:
           release-type: simple
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+          # Reuse the Renovate PAT/App token: it has contents + pull-requests
+          # write, and using it (instead of the default GITHUB_TOKEN) makes the
+          # release PR's merge re-trigger this workflow so the release actually
+          # gets cut. Falls back to GITHUB_TOKEN if the secret isn't set.
+          token: ${{ secrets.RENOVATE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge on the release PR
+        if: ${{ steps.rp.outputs.pr }}
+        env:
+          GH_TOKEN: ${{ secrets.RENOVATE_TOKEN || secrets.GITHUB_TOKEN }}
+          RP_PR: ${{ steps.rp.outputs.pr }}
+          REPO: ${{ github.repository }}
+        run: |
+          pr_number=$(echo "$RP_PR" | jq -r '.number')
+          if [ -n "$pr_number" ] && [ "$pr_number" != "null" ]; then
+            echo "Enabling auto-merge on release PR #$pr_number"
+            gh pr merge "$pr_number" --auto --squash --repo "$REPO"
+          fi
+
+      - uses: actions/checkout@v6
+        if: ${{ steps.rp.outputs.release_created }}
       - name: tag major and minor versions
         if: ${{ steps.rp.outputs.release_created }}
         run: |

@@ -1,9 +1,23 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
   "baseBranches": ["main"],
-  "dependencyDashboard": true,
-  "rebaseWhen": "conflicted",
   "labels": ["dependencies"],
-  "automergeStrategy": "merge-commit",
+
+  "rebaseWhen": "behind-base-branch",
+
+  "automerge": true,
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "automergeStrategy": "squash",
+
+  "semanticCommits": "enabled",
+  "semanticCommitType": "fix",
+  "semanticCommitScope": "deps",
+
+  "prConcurrentLimit": 0,
+  "prHourlyLimit": 0,
+
   "customManagers": [
     {
       "customType": "regex",
@@ -14,18 +28,40 @@
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
     }
   ],
+
   "packageRules": [
+    {
+      "description": "Self-approve every update so required-review branch protection can't block automerge (no human needed).",
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch",
+        "digest",
+        "pin",
+        "pinDigest",
+        "bump"
+      ],
+      "autoApprove": true
+    },
+    {
+      "description": "Batch all non-major updates into one self-updating PR so the pipeline cuts one release per batch, not dozens. Timing is driven by the renovate.yaml workflow schedule (no per-rule schedule, which would not overlap a cron-driven self-hosted run).",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest",
+        "pin",
+        "pinDigest",
+        "lockFileMaintenance"
+      ],
+      "groupName": "all non-major dependencies"
+    },
     {
       "matchCategories": ["docker"],
       "separateMinorPatch": true
     },
     {
       "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true,
-      "autoApprove": true,
-      "pinDigests": true,
-      "schedule": ["every weekday after 4am"]
+      "pinDigests": true
     }
   ]
 }

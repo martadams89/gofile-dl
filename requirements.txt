@@ -3,6 +3,12 @@ Flask>=3.1.0
 requests==2.32.5
 pathvalidate==3.3.1
 
+# Browser TLS impersonation for GoFile's API edge (ships prebuilt wheels).
+# Lets requests to api.gofile.io present a real Chrome TLS fingerprint, which
+# gets past the fingerprint-based part of GoFile's bot filtering. Optional:
+# the tool falls back to plain `requests` if this is unavailable.
+curl_cffi>=0.7.0
+
 # Flask extensions
 Flask-WTF>=1.2.1
 

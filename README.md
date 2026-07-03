@@ -15,21 +15,35 @@ extensive enhancements and a modern architecture._
 
 ## Important Notes
 
-### GoFile API Compatibility (March 2026 Update)
+### GoFile API Compatibility (2026 Update)
 
-**BREAKING CHANGE**: GoFile has restricted their API to premium accounts only as of March 2026.
+**Free downloads work — no premium account required.**
 
-This application has been updated to work around these restrictions:
+Earlier in 2026 GoFile started returning `error-notPremium` for free/guest
+accounts, which looked like the API had been locked to premium users. The real
+cause was different: GoFile moved the `X-Website-Token` from a **static** value
+published in `config.js` (now a decoy) to a **dynamically generated** token
+computed client-side. The old static token is simply rejected.
 
-- ✅ **Automatic Fallback**: When the API returns `error-notPremium`, the app automatically falls back to web scraping
-- ✅ **Browser Session Emulation**: Uses browser-like requests to access content through the web interface
-- ✅ **Updated Authentication**: Uses `X-Website-Token` header for API access
+This app now reproduces that generation, so free downloads work again:
+
+- ✅ **Dynamic website token**: `X-Website-Token` is computed as
+  `sha256(userAgent::language::accountToken::timeWindow::salt)`, matching
+  GoFile's own `wt.obf.js`. The `timeWindow` rotates every 4 hours.
+- ✅ **Matching request headers**: The `User-Agent` and `X-BL` (language) headers
+  sent on each request match the values hashed into the token (the server
+  recomputes and validates it).
+- ✅ **Rate-limit handling**: Guest content requests are rate-limited by GoFile;
+  the app backs off and retries automatically.
 - ✅ **Nested Folders**: Full support for deeply nested folder structures with UUID-based IDs
 - ✅ **Special Characters**: Properly handles emoji and special characters in folder names
 - ✅ **Password Protection**: Supports SHA-256 password hashing for protected content
 - ✅ **Recursive Downloads**: Automatically traverses and downloads all subfolders
 
-**Note**: The GoFile API structure has changed significantly. The `/contents/{id}` endpoint now requires premium accounts. This version includes a web-based fallback mechanism to maintain functionality for free users.
+**If `error-notPremium` returns in the future**, GoFile has most likely rotated
+the salt embedded in `wt.obf.js`. You can update it without a code change by
+setting the `GOFILE_WT_SALT` environment variable (see the table below), or by
+updating the tool. A premium token still works and bypasses guest rate limits.
 
 ## Features
 
@@ -144,20 +158,46 @@ docker-compose up -d
 
 ### Environment Variables Reference
 
-| Variable               | Description                    | Default                   | Example           |
-| ---------------------- | ------------------------------ | ------------------------- | ----------------- |
-| `PORT`                 | Web server port                | `2355`                    | `8080`            |
-| `HOST`                 | Web server host                | `0.0.0.0`                 | `127.0.0.1`       |
-| `BASE_DIR`             | Base directory for downloads   | `/app`                    | `/downloads`      |
-| `CONFIG_DIR`           | Directory for config/tracking  | `/config`                 | `/app/config`     |
-| `SECRET_KEY`           | Flask secret key for sessions  | Random value              | `my-secret-key`   |
-| `DEBUG`                | Enable Flask debug mode        | `false`                   | `true`            |
-| `AUTH_ENABLED`         | Enable basic authentication    | `false`                   | `true`            |
-| `AUTH_USERNAME`        | Authentication username        | `admin`                   | `user`            |
-| `AUTH_PASSWORD`        | Authentication password        | `change-me-in-production` | `secure-password` |
-| `DEFAULT_RETRIES`      | Default retry attempts         | `3`                       | `5`               |
-| `RETRY_DELAY`          | Seconds between retry attempts | `5`                       | `10`              |
-| `GOFILE_PREMIUM_TOKEN` | GoFile premium account token   | `None`                    | `your-token-here` |
+| Variable               | Description                                                                                     | Default                   | Example                        |
+| ---------------------- | ----------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------ |
+| `PORT`                 | Web server port                                                                                 | `2355`                    | `8080`                         |
+| `HOST`                 | Web server host                                                                                 | `0.0.0.0`                 | `127.0.0.1`                    |
+| `BASE_DIR`             | Base directory for downloads                                                                    | `/app`                    | `/downloads`                   |
+| `CONFIG_DIR`           | Directory for config/tracking                                                                   | `/config`                 | `/app/config`                  |
+| `SECRET_KEY`           | Flask secret key for sessions                                                                   | Random value              | `my-secret-key`                |
+| `DEBUG`                | Enable Flask debug mode                                                                         | `false`                   | `true`                         |
+| `AUTH_ENABLED`         | Enable basic authentication                                                                     | `false`                   | `true`                         |
+| `AUTH_USERNAME`        | Authentication username                                                                         | `admin`                   | `user`                         |
+| `AUTH_PASSWORD`        | Authentication password                                                                         | `change-me-in-production` | `secure-password`              |
+| `DEFAULT_RETRIES`      | Default retry attempts                                                                          | `3`                       | `5`                            |
+| `RETRY_DELAY`          | Seconds between retry attempts                                                                  | `5`                       | `10`                           |
+| `GOFILE_PREMIUM_TOKEN` | GoFile premium account token                                                                    | `None`                    | `your-token-here`              |
+| `GOFILE_WT_SALT`       | Salt for website-token generation (update if GoFile rotates it)                                 | current known value       | `9844d94d963d30`               |
+| `GOFILE_USER_AGENT`    | User-Agent used for API + token                                                                 | Chrome UA string          | `Mozilla/5.0 ...`              |
+| `GOFILE_LANGUAGE`      | Language used for `X-BL` + token                                                                | `en-US`                   | `en-US`                        |
+| `GOFILE_PROXY`         | HTTP/SOCKS proxy for GoFile requests (use a clean IP if `api.gofile.io` resets your connection) | `None`                    | `socks5://user:pass@host:1080` |
+| `GOFILE_IMPERSONATE`   | curl_cffi browser profile (`off` to disable)                                                    | `chrome`                  | `chrome`, `safari`, `off`      |
+
+### If `api.gofile.io` resets your connection (VPN / cloud / datacenter)
+
+GoFile's API host filters traffic by TLS fingerprint and IP reputation. From
+VPN, cloud or datacenter IPs it often **resets the connection** before any
+response (you'll see a clear "GoFile reset the connection … This IP is blocked
+by GoFile's API edge" message in the logs). This is a network-level block, not a
+bug in this tool. To work around it:
+
+1. **Run from a residential connection** (most reliable), or
+2. **Set `GOFILE_PROXY`** to an HTTP/SOCKS proxy on a clean/residential IP:
+   ```yaml
+   environment:
+     - GOFILE_PROXY=socks5://user:pass@your-proxy:1080
+   ```
+3. `curl_cffi` (installed by default) presents a real Chrome TLS fingerprint,
+   which helps when the block is fingerprint-based rather than pure IP.
+
+File downloads go to GoFile's `store-*` servers (not `api.gofile.io`) and are
+usually reachable even when the API host is blocked; `GOFILE_PROXY` applies to
+those too.
 
 ### Premium Account Support
 
@@ -326,7 +366,8 @@ Example health check response:
 
 5. **GoFile download errors**
    - Error "Cannot get wt": GoFile may have updated their JavaScript structure. Check for application updates.
-   - **Error "API error: error-notPremium"**: This is expected as of March 2026. GoFile now restricts the API to premium accounts. The application automatically falls back to a web-based method to retrieve content. If you see this error followed by "Successfully retrieved content via web fallback", everything is working correctly.
+   - **Error "API error: error-notPremium"**: This means GoFile rejected the website token. It normally works out of the box; if it persists, GoFile has likely rotated the salt embedded in `wt.obf.js`. Set `GOFILE_WT_SALT` to the current value (or update the tool). A premium token also bypasses this.
+   - **Error "error-rateLimit"**: GoFile rate-limits free/guest content requests. The app backs off and retries automatically; if it persists, wait a few minutes or use a premium token.
    - **Timeout errors (Read timed out)**: GoFile's API may be slow or overloaded. The app now uses 30-45 second timeouts and automatically retries 3 times. If timeouts persist, wait a few minutes and try again.
    - If web fallback fails: This may indicate GoFile has further changed their interface. Please check for updates or report the issue on GitHub.
    - Nested folders not downloading: Verify you're providing the top-level folder URL, not individual file links
