@@ -15,6 +15,11 @@ on:
       - ".github/workflows/**"
   workflow_dispatch:
 
+# Cancel superseded runs on the same branch/PR to save CI minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     if: ${{ !startsWith(github.event.head_commit.message, 'docs') }} # skip on documentation

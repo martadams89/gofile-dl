@@ -15,21 +15,35 @@ extensive enhancements and a modern architecture._
 
 ## Important Notes
 
-### GoFile API Compatibility (March 2026 Update)
+### GoFile API Compatibility (2026 Update)
 
-**BREAKING CHANGE**: GoFile has restricted their API to premium accounts only as of March 2026.
+**Free downloads work — no premium account required.**
 
-This application has been updated to work around these restrictions:
+Earlier in 2026 GoFile started returning `error-notPremium` for free/guest
+accounts, which looked like the API had been locked to premium users. The real
+cause was different: GoFile moved the `X-Website-Token` from a **static** value
+published in `config.js` (now a decoy) to a **dynamically generated** token
+computed client-side. The old static token is simply rejected.
 
-- ✅ **Automatic Fallback**: When the API returns `error-notPremium`, the app automatically falls back to web scraping
-- ✅ **Browser Session Emulation**: Uses browser-like requests to access content through the web interface
-- ✅ **Updated Authentication**: Uses `X-Website-Token` header for API access
+This app now reproduces that generation, so free downloads work again:
+
+- ✅ **Dynamic website token**: `X-Website-Token` is computed as
+  `sha256(userAgent::language::accountToken::timeWindow::salt)`, matching
+  GoFile's own `wt.obf.js`. The `timeWindow` rotates every 4 hours.
+- ✅ **Matching request headers**: The `User-Agent` and `X-BL` (language) headers
+  sent on each request match the values hashed into the token (the server
+  recomputes and validates it).
+- ✅ **Rate-limit handling**: Guest content requests are rate-limited by GoFile;
+  the app backs off and retries automatically.
 - ✅ **Nested Folders**: Full support for deeply nested folder structures with UUID-based IDs
 - ✅ **Special Characters**: Properly handles emoji and special characters in folder names
 - ✅ **Password Protection**: Supports SHA-256 password hashing for protected content
 - ✅ **Recursive Downloads**: Automatically traverses and downloads all subfolders
 
-**Note**: The GoFile API structure has changed significantly. The `/contents/{id}` endpoint now requires premium accounts. This version includes a web-based fallback mechanism to maintain functionality for free users.
+**If `error-notPremium` returns in the future**, GoFile has most likely rotated
+the salt embedded in `wt.obf.js`. You can update it without a code change by
+setting the `GOFILE_WT_SALT` environment variable (see the table below), or by
+updating the tool. A premium token still works and bypasses guest rate limits.
 
 ## Features
 
@@ -158,6 +172,32 @@ docker-compose up -d
 | `DEFAULT_RETRIES`      | Default retry attempts         | `3`                       | `5`               |
 | `RETRY_DELAY`          | Seconds between retry attempts | `5`                       | `10`              |
 | `GOFILE_PREMIUM_TOKEN` | GoFile premium account token   | `None`                    | `your-token-here` |
+| `GOFILE_WT_SALT`       | Salt for website-token generation (update if GoFile rotates it) | current known value | `9844d94d963d30` |
+| `GOFILE_USER_AGENT`    | User-Agent used for API + token | Chrome UA string         | `Mozilla/5.0 ...` |
+| `GOFILE_LANGUAGE`      | Language used for `X-BL` + token | `en-US`                  | `en-US`           |
+| `GOFILE_PROXY`         | HTTP/SOCKS proxy for GoFile requests (use a clean IP if `api.gofile.io` resets your connection) | `None` | `socks5://user:pass@host:1080` |
+| `GOFILE_IMPERSONATE`   | curl_cffi browser profile (`off` to disable) | `chrome` | `chrome`, `safari`, `off` |
+
+### If `api.gofile.io` resets your connection (VPN / cloud / datacenter)
+
+GoFile's API host filters traffic by TLS fingerprint and IP reputation. From
+VPN, cloud or datacenter IPs it often **resets the connection** before any
+response (you'll see a clear "GoFile reset the connection … This IP is blocked
+by GoFile's API edge" message in the logs). This is a network-level block, not a
+bug in this tool. To work around it:
+
+1. **Run from a residential connection** (most reliable), or
+2. **Set `GOFILE_PROXY`** to an HTTP/SOCKS proxy on a clean/residential IP:
+   ```yaml
+   environment:
+     - GOFILE_PROXY=socks5://user:pass@your-proxy:1080
+   ```
+3. `curl_cffi` (installed by default) presents a real Chrome TLS fingerprint,
+   which helps when the block is fingerprint-based rather than pure IP.
+
+File downloads go to GoFile's `store-*` servers (not `api.gofile.io`) and are
+usually reachable even when the API host is blocked; `GOFILE_PROXY` applies to
+those too.
 
 ### Premium Account Support
 
@@ -326,7 +366,8 @@ Example health check response:
 
 5. **GoFile download errors**
    - Error "Cannot get wt": GoFile may have updated their JavaScript structure. Check for application updates.
-   - **Error "API error: error-notPremium"**: This is expected as of March 2026. GoFile now restricts the API to premium accounts. The application automatically falls back to a web-based method to retrieve content. If you see this error followed by "Successfully retrieved content via web fallback", everything is working correctly.
+   - **Error "API error: error-notPremium"**: This means GoFile rejected the website token. It normally works out of the box; if it persists, GoFile has likely rotated the salt embedded in `wt.obf.js`. Set `GOFILE_WT_SALT` to the current value (or update the tool). A premium token also bypasses this.
+   - **Error "error-rateLimit"**: GoFile rate-limits free/guest content requests. The app backs off and retries automatically; if it persists, wait a few minutes or use a premium token.
    - **Timeout errors (Read timed out)**: GoFile's API may be slow or overloaded. The app now uses 30-45 second timeouts and automatically retries 3 times. If timeouts persist, wait a few minutes and try again.
    - If web fallback fails: This may indicate GoFile has further changed their interface. Please check for updates or report the issue on GitHub.
    - Nested folders not downloading: Verify you're providing the top-level folder URL, not individual file links
@@ -438,6 +479,39 @@ docker-compose exec gofile-dl curl -X POST http://localhost:2355/start \
 - Delete the tracking file `.gofile_tracker_<contentId>.json` to force a complete re-download
 - The tracking is per content ID, so different GoFile folders are tracked separately
 - Progress shown in the UI is per-subfolder, allowing you to see which folder is currently being processed
+
+## Automated maintenance (hands-off updates & releases)
+
+Dependency updates, merging and releases are fully automated — no human
+interaction is required in the normal case.
+
+**The loop:**
+
+1. **Renovate** ([`.github/renovate.json`](.github/renovate.json)) opens PRs for
+   dependency updates. Non-major updates are batched into a single self-updating
+   PR; majors get their own. Each PR uses a `fix(deps): …` conventional-commit
+   title.
+2. CI (lint + tests + Docker build) runs on the PR. Renovate self-approves it
+   and GitHub's **auto-merge** merges it **only once the required checks pass**
+   (`platformAutomerge`). Failing updates stay open and are rebased/retried
+   ("self-healing").
+3. The merge to `main` triggers **release-please**, which opens/updates a
+   release PR. Because the dependency commits are `fix:`, they bump a patch.
+4. release-please's PR is put into **auto-merge** too; when it merges,
+   release-please cuts the GitHub release + tags and the Docker image is built
+   and published — all automatically.
+
+**One-time setup** (required for a truly hands-off pipeline):
+
+| Requirement | Why |
+| ----------- | --- |
+| `RENOVATE_TOKEN` secret (already used) | Lets Renovate open/merge PRs. Its pushes trigger the release workflow. |
+| `RELEASE_TOKEN` secret (PAT or GitHub App token, `contents` + `pull-requests` write) | So the release PR's merge **re-triggers** the release workflow. Pushes made with the default `GITHUB_TOKEN` do not trigger workflows. Falls back to `GITHUB_TOKEN` if unset (releases still work, but the final publish may need a manual nudge). |
+| **Settings → General → Allow auto-merge** = on | Required for `platformAutomerge` and the release-PR auto-merge. |
+| **Branch protection on `main` with required status checks** (recommended) | Makes "merge only if tests pass" enforceable. Prefer required *checks* over required *reviews*; if you require reviews, run Renovate as a **GitHub App** so its self-approval counts. |
+
+To disable automerge for a specific ecosystem, add a `packageRule` with
+`"automerge": false`.
 
 ## License
 

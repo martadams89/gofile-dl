@@ -19,6 +19,131 @@ logger = logging.getLogger("GoFile")
 DEFAULT_TIMEOUT = 30  # 30 seconds - increased for slower connections
 CONTENT_TIMEOUT = 45  # 45 seconds - for content API requests that may be slower
 
+# --- Network access to GoFile ------------------------------------------------
+# GoFile's API host (api.gofile.io) sits behind an edge that filters traffic by
+# TLS fingerprint and IP reputation: it resets connections (curl error 35,
+# "Connection reset by peer", right after the TLS Client Hello) from datacenter/
+# VPN/flagged IPs and non-browser TLS stacks. When that happens, no token is
+# even exchanged. Two mitigations are supported:
+#
+#   * GOFILE_PROXY   - route requests through an HTTP/SOCKS proxy on a clean
+#                      (ideally residential) IP.
+#   * curl_cffi      - if installed, impersonate a real Chrome TLS fingerprint,
+#                      which gets past the fingerprint-based part of the filter.
+#
+# Both are optional; without them the tool uses plain `requests`, which is fine
+# from a normal residential connection.
+GOFILE_PROXY = os.environ.get("GOFILE_PROXY", "").strip() or None
+GOFILE_IMPERSONATE = os.environ.get("GOFILE_IMPERSONATE", "chrome").strip()
+
+try:
+    from curl_cffi import requests as _cffi_requests  # type: ignore
+    _HAS_CFFI = bool(GOFILE_IMPERSONATE) and GOFILE_IMPERSONATE.lower() != "off"
+except ImportError:
+    _cffi_requests = None
+    _HAS_CFFI = False
+
+# Exceptions that mean "GoFile's edge dropped us" (IP/TLS block), worth an
+# explicit, actionable message rather than a generic stack trace.
+_RESET_HINTS = ("reset by peer", "connection aborted", "err_empty_response",
+                "recv failure", "curl: (35)", "curl: (56)")
+
+
+def _is_connection_reset(exc: Exception) -> bool:
+    """True if an exception looks like GoFile's edge resetting the connection."""
+    text = f"{type(exc).__name__}: {exc}".lower()
+    return any(hint in text for hint in _RESET_HINTS)
+
+
+def api_request(method: str, url: str, **kwargs: Any) -> Any:
+    """
+    Perform an HTTP request to a GoFile endpoint.
+
+    Uses curl_cffi with browser TLS impersonation when available (to get past
+    fingerprint-based filtering) and honors GOFILE_PROXY. Falls back to
+    `requests`. The returned object exposes the requests-compatible attributes
+    used here (`.status_code`, `.text`, `.headers`, `.json()`), and for
+    streaming downloads `stream=True` plus `.iter_content()` / context-manager
+    use.
+
+    Args:
+        method: HTTP method ("GET"/"POST").
+        url: Target URL.
+        **kwargs: Passed through (headers, params, timeout, stream, ...).
+
+    Returns:
+        The response object from curl_cffi or requests.
+    """
+    if GOFILE_PROXY:
+        kwargs.setdefault("proxies", {"http": GOFILE_PROXY, "https": GOFILE_PROXY})
+    if _HAS_CFFI and _cffi_requests is not None:
+        return _cffi_requests.request(method, url, impersonate=GOFILE_IMPERSONATE, **kwargs)
+    return requests.request(method, url, **kwargs)
+
+# --- GoFile website-token (wt) generation -----------------------------------
+# GoFile no longer accepts the static token published in config.js (that value
+# is now a decoy). The real X-Website-Token is computed client-side in
+# gofile.io/dist/js/wt.obf.js as:
+#
+#     sha256(f"{userAgent}::{language}::{accountToken}::{window}::{salt}")
+#
+# where `window = floor(unix_time / 14400)` is a rotating 4-hour bucket and
+# `salt` is a secret embedded in wt.obf.js. The server recomputes and validates
+# this token, so the User-Agent and language we hash MUST match the User-Agent
+# and X-BL headers we actually send on the request.
+#
+# All three inputs can be overridden via environment variables so the tool can
+# be kept working if GoFile rotates the salt or changes the UA expectations
+# without needing a code change.
+GOFILE_USER_AGENT = os.environ.get(
+    "GOFILE_USER_AGENT",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+)
+GOFILE_LANGUAGE = os.environ.get("GOFILE_LANGUAGE", "en-US")
+# Salt currently embedded in wt.obf.js. If GoFile rotates it and downloads start
+# failing with "error-notPremium" again, update this value (or set the env var).
+GOFILE_WT_SALT = os.environ.get("GOFILE_WT_SALT", "9844d94d963d30")
+WT_WINDOW_SECONDS = 14400  # 4-hour rotating window used by GoFile
+
+# Query parameters GoFile's web client now sends on every /contents request.
+# pageSize is capped by GoFile; 1000 covers the vast majority of folders. Folders
+# with more children would need pagination (see fetch_contents()).
+CONTENTS_QUERY_PARAMS: Dict[str, Any] = {
+    "contentFilter": "",
+    "page": 1,
+    "pageSize": 1000,
+    "sortField": "createTime",
+    "sortDirection": -1,
+}
+
+
+def generate_website_token(
+    account_token: str,
+    window_offset: int = 0,
+    user_agent: str = GOFILE_USER_AGENT,
+    language: str = GOFILE_LANGUAGE,
+    salt: str = GOFILE_WT_SALT,
+) -> str:
+    """
+    Reproduce GoFile's client-side X-Website-Token generation.
+
+    Args:
+        account_token: The account/guest token from POST /accounts.
+        window_offset: Offset (in 4-hour windows) from the current time window.
+            Used to retry with the previous window near a bucket boundary.
+        user_agent: User-Agent string; must match the request's User-Agent.
+        language: Language; must match the request's X-BL header.
+        salt: Secret salt embedded in wt.obf.js.
+
+    Returns:
+        The 64-character hex website token.
+    """
+    window = int(time.time() // WT_WINDOW_SECONDS) + window_offset
+    raw = f"{user_agent}::{language}::{account_token}::{window}::{salt}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def strip_emojis_func(text: str) -> str:
     """
     Remove emojis and other problematic Unicode characters from text.
@@ -201,38 +326,53 @@ class DownloadTracker:
         
         return None
 
-class GoFileMeta(type):
-    """
-    Metaclass for implementing the Singleton pattern.
-    
-    Ensures only one instance of GoFile is created.
-    """
-    _instances: Dict[type, Any] = {}
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
-
-class GoFile(metaclass=GoFileMeta):
+class GoFile:
     """
     GoFile API client for downloading files and folders.
-    
+
     Provides methods to authenticate with the GoFile API and download content.
-    Uses a Singleton pattern to ensure only one instance is created.
+
+    A fresh instance should be created per download task: each holds its own
+    account token, so this is safe to use from multiple threads concurrently.
+    (Previously this class was a process-wide singleton, which leaked one task's
+    premium token into other tasks and shared token state across threads.)
     """
-    
+
     def __init__(self, premium_token: Optional[str] = None) -> None:
-        """Initialize the GoFile client with empty token and wt.
-        
+        """Initialize the GoFile client with empty token.
+
         Args:
             premium_token: Optional premium account token. If provided, uses premium
                          account instead of creating guest account.
         """
         self.token: str = ""
-        self.wt: str = ""
         self.premium_token: Optional[str] = premium_token
         self.is_premium: bool = premium_token is not None
+
+    @staticmethod
+    def parse_content_id(url: str) -> Optional[str]:
+        """
+        Extract a GoFile content ID from a URL or bare ID.
+
+        Accepts full share URLs (http/https, with or without www, trailing
+        slashes or query strings) as well as a bare content code.
+
+        Args:
+            url: A GoFile URL such as ``https://gofile.io/d/abc123`` or a bare id.
+
+        Returns:
+            The content ID, or None if it can't be determined.
+        """
+        if not url:
+            return None
+        candidate = url.strip()
+        match = re.search(r"gofile\.io/d/([^/?#\s]+)", candidate, flags=re.IGNORECASE)
+        if match:
+            return match.group(1)
+        # Allow passing a bare content id (letters/digits, no scheme or path).
+        if re.fullmatch(r"[A-Za-z0-9\-]+", candidate):
+            return candidate
+        return None
     
     def count_files(self, children: Dict[str, Dict]) -> int:
         """
@@ -270,7 +410,11 @@ class GoFile(metaclass=GoFileMeta):
                 max_retries = 3
                 for attempt in range(max_retries):
                     try:
-                        data = requests.post("https://api.gofile.io/accounts", timeout=DEFAULT_TIMEOUT).json()
+                        data = api_request(
+                            "POST", "https://api.gofile.io/accounts",
+                            headers={"User-Agent": GOFILE_USER_AGENT, "Origin": "https://gofile.io"},
+                            timeout=DEFAULT_TIMEOUT,
+                        ).json()
                         if data.get("status") == "ok":
                             self.token = data["data"].get("token", "")
                             logger.info(f"Updated token: {self.token}")
@@ -284,26 +428,53 @@ class GoFile(metaclass=GoFileMeta):
                         else:
                             logger.error("Failed to get token after multiple attempts due to timeout")
                     except Exception as e:
+                        if _is_connection_reset(e):
+                            self._log_edge_block("account creation")
+                            break
                         logger.error(f"Error getting token: {e}")
                         break
     
-    def update_wt(self) -> None:
+    def website_token(self, window_offset: int = 0) -> str:
         """
-        Update the 'wt' (websiteToken) parameter needed for content requests.
-        
-        Extracts the wt parameter from GoFile's config.js JavaScript file.
+        Compute the X-Website-Token for the current account token.
+
+        This replaces the old approach of scraping a static token from
+        config.js, which GoFile turned into a decoy (it now returns
+        "error-notPremium"). See generate_website_token() for the algorithm.
+
+        Args:
+            window_offset: 4-hour window offset, used to retry with the previous
+                window near a time-bucket boundary.
+
+        Returns:
+            The 64-character hex website token, or "" if no token is set.
         """
-        if self.wt == "":
-            try:
-                alljs = requests.get("https://gofile.io/dist/js/config.js", timeout=DEFAULT_TIMEOUT).text
-                if 'appdata.wt = "' in alljs:
-                    self.wt = alljs.split('appdata.wt = "')[1].split('"')[0]
-                    logger.info(f"Updated wt: {self.wt}")
-                else:
-                    logger.error("Cannot extract wt from config.js")
-            except Exception as e:
-                logger.error(f"Failed to get wt: {e}")
-    
+        if not self.token:
+            return ""
+        return generate_website_token(self.token, window_offset=window_offset)
+
+    def _content_headers(self, window_offset: int = 0) -> Dict[str, str]:
+        """Build the headers GoFile expects for a /contents request."""
+        return {
+            "Authorization": "Bearer " + self.token,
+            "X-Website-Token": self.website_token(window_offset),
+            "X-BL": GOFILE_LANGUAGE,
+            "User-Agent": GOFILE_USER_AGENT,
+            "Accept": "*/*",
+            "Origin": "https://gofile.io",
+            "Referer": "https://gofile.io/",
+        }
+
+    @staticmethod
+    def _log_edge_block(what: str) -> None:
+        """Explain a connection reset from GoFile's API edge and how to fix it."""
+        logger.error(f"GoFile reset the connection during {what} (api.gofile.io).")
+        logger.error("This IP is blocked by GoFile's API edge - common on VPN,")
+        logger.error("datacenter and cloud hosts. Remedies:")
+        logger.error("  * run from a residential connection, or")
+        logger.error("  * set GOFILE_PROXY to an HTTP/SOCKS proxy on a clean IP, or")
+        logger.error("  * install curl_cffi (pip install curl_cffi) for browser TLS.")
+
     def get_content_from_web(self, content_id: str, password: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Fallback method to extract content information from the GoFile web interface.
@@ -342,30 +513,25 @@ class GoFile(metaclass=GoFileMeta):
             response.raise_for_status()
             
             # Step 2: Try to make API request with the session cookies
-            api_headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/json',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Origin': 'https://gofile.io',
-                'Referer': url,
-                'Authorization': f'Bearer {self.token}',
-                'X-Website-Token': self.wt
-            }
-            
+            api_headers = dict(self._content_headers())
+            api_headers['Referer'] = url
+
             # Build params
-            params = {}
+            params = dict(CONTENTS_QUERY_PARAMS)
             if password:
                 hash_password = hashlib.sha256(password.encode()).hexdigest()
                 params['password'] = hash_password
-            
-            # Try the API call again with browser-like session
-            api_response = session.get(
+
+            # Try the API call again with browser-like impersonation/proxy
+            api_response = api_request(
+                "GET",
                 f"https://api.gofile.io/contents/{content_id}",
                 headers=api_headers,
                 params=params,
-                timeout=CONTENT_TIMEOUT
+                timeout=CONTENT_TIMEOUT,
+                cookies=session.cookies.get_dict(),
             )
-            
+
             data = api_response.json()
             
             if data.get("status") == "ok":
@@ -403,9 +569,107 @@ class GoFile(metaclass=GoFileMeta):
             import traceback
             logger.debug(traceback.format_exc())
             return None
-    
-    def execute(self, 
-                dir: str, 
+
+    def fetch_contents(self, content_id: str, password: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        Fetch a content listing from the GoFile API.
+
+        Handles the current (2026) API requirements: a dynamically generated
+        website token, the extra query parameters GoFile's web client sends, and
+        the transient errors it can return (timeouts and rate limiting). Falls
+        back to the previous 4-hour token window near a bucket boundary, and to
+        web scraping as a last resort.
+
+        Args:
+            content_id: GoFile content ID.
+            password: Optional password for protected content.
+
+        Returns:
+            Parsed API response dict with status == "ok", or None on failure.
+        """
+        params = dict(CONTENTS_QUERY_PARAMS)
+        if password:
+            params["password"] = hashlib.sha256(password.encode()).hexdigest()
+
+        url = f"https://api.gofile.io/contents/{content_id}"
+        max_attempts = 4
+        # Try the current token window first, then the previous one (offset -1)
+        # in case we're just past a 4-hour boundary but the server clock isn't.
+        window_offsets = [0, -1]
+
+        for attempt in range(max_attempts):
+            window_offset = window_offsets[min(attempt, len(window_offsets) - 1)]
+            try:
+                response = api_request(
+                    "GET",
+                    url,
+                    headers=self._content_headers(window_offset),
+                    params=params,
+                    timeout=CONTENT_TIMEOUT,
+                )
+                data = response.json()
+            except requests.exceptions.Timeout:
+                if attempt < max_attempts - 1:
+                    logger.warning(f"Content request timed out, retrying ({attempt + 1}/{max_attempts})...")
+                    time.sleep(3)
+                    continue
+                logger.error(f"Failed to fetch content {content_id} after {max_attempts} attempts due to timeout")
+                logger.error("GoFile's API may be slow or overloaded. Try again later.")
+                return None
+            except Exception as e:
+                if _is_connection_reset(e):
+                    self._log_edge_block("content fetch")
+                    # Web fallback also hits api.gofile.io, so it won't help here.
+                    return None
+                logger.error(f"Failed to fetch content {content_id}: {e}")
+                return None
+
+            status = data.get("status")
+            if status == "ok":
+                return data
+
+            if status == "error-rateLimit":
+                # GoFile rate-limits guest content requests; back off and retry.
+                wait = 3 * (attempt + 1)
+                if attempt < max_attempts - 1:
+                    logger.warning(f"GoFile rate limit hit, waiting {wait}s before retry ({attempt + 1}/{max_attempts})...")
+                    time.sleep(wait)
+                    continue
+                logger.error("GoFile rate limit persisted. Wait a few minutes and try again.")
+                return None
+
+            if status == "error-notPremium":
+                # A correct website token is accepted by the server; getting this
+                # means our token was rejected. Retry once with the previous
+                # window, otherwise the embedded salt has likely rotated.
+                if attempt == 0:
+                    logger.warning("Got error-notPremium; retrying with previous token window...")
+                    continue
+                if self.is_premium:
+                    logger.error("Premium account returned error-notPremium. Check that the token is valid.")
+                    return None
+                logger.warning("Website token rejected; attempting web fallback...")
+                web_data = self.get_content_from_web(content_id, password)
+                if web_data and web_data.get("status") == "ok":
+                    logger.info("Successfully retrieved content via web fallback")
+                    return web_data
+                logger.error("Website token rejected (GoFile may have rotated its salt).")
+                logger.error("Set GOFILE_WT_SALT to the current value, or update the tool.")
+                logger.error("API error: %s", data)
+                return None
+
+            # Some transient errors are worth one more try.
+            if status in ("error-notFound",):
+                logger.error(f"Content {content_id} not found (it may have been deleted).")
+                return None
+
+            logger.error("API error: %s", data)
+            return None
+
+        return None
+
+    def execute(self,
+                dir: str,
                 content_id: Optional[str] = None, 
                 url: Optional[str] = None, 
                 password: Optional[str] = None,
@@ -449,70 +713,16 @@ class GoFile(metaclass=GoFileMeta):
         """
         if content_id is not None:
             self.update_token()
-            self.update_wt()
-            
+
             # Initialize tracker for incremental mode
             if incremental and tracker is None:
                 tracker = DownloadTracker(dir, content_id, folder_pattern)
-            
-            # Build API request with proper parameters
-            params = {}
-            if password:
-                hash_password = hashlib.sha256(password.encode()).hexdigest()
-                params['password'] = hash_password
-            
-            # Try API request with retry on timeout
-            max_retries = 3
-            data = None
-            for attempt in range(max_retries):
-                try:
-                    response = requests.get(
-                        f"https://api.gofile.io/contents/{content_id}",
-                        headers={
-                            "Authorization": "Bearer " + self.token,
-                            "X-Website-Token": self.wt
-                        },
-                        params=params,
-                        timeout=CONTENT_TIMEOUT  # Use longer timeout for content requests
-                    )
-                    data = response.json()
-                    break  # Success, exit retry loop
-                except requests.exceptions.Timeout:
-                    if attempt < max_retries - 1:
-                        logger.warning(f"Content request timed out, retrying ({attempt + 1}/{max_retries})...")
-                        time.sleep(3)  # Wait before retry
-                    else:
-                        logger.error(f"Failed to fetch content {content_id} after {max_retries} attempts due to timeout")
-                        logger.error("GoFile's API may be slow or overloaded. Try again later.")
-                        return
-                except Exception as e:
-                    logger.error(f"Failed to fetch content {content_id}: {e}")
-                    return
-            
+
+            data = self.fetch_contents(content_id, password)
             if data is None:
-                logger.error(f"No data received for content {content_id}")
+                # fetch_contents already logged the specific reason.
                 return
-            
-            # Check for API errors
-            if data.get("status") != "ok":
-                # If we get error-notPremium, try web scraping fallback
-                if data.get("status") == "error-notPremium":
-                    if self.is_premium:
-                        logger.error("Premium account returned error-notPremium. Check if token is valid.")
-                        logger.error("API error: %s", data)
-                        return
-                    logger.warning("API returned error-notPremium, attempting web fallback...")
-                    web_data = self.get_content_from_web(content_id, password)
-                    if web_data and web_data.get("status") == "ok":
-                        data = web_data
-                        logger.info("Successfully retrieved content via web fallback")
-                    else:
-                        logger.error("Web fallback failed. Content may require premium account or is inaccessible.")
-                        logger.error("API error: %s", data)
-                        return
-                else:
-                    logger.error("API error: %s", data)
-                    return
+
             if data["data"].get("passwordStatus", "passwordOk") != "passwordOk":
                 logger.error("Invalid password: %s", data["data"].get("passwordStatus"))
                 return
@@ -696,8 +906,8 @@ class GoFile(metaclass=GoFileMeta):
                 if callable(file_progress_callback):
                     file_progress_callback(file_path, 100)
         elif url is not None:
-            if url.startswith("https://gofile.io/d/"):
-                cid = url.split("/")[-1]
+            cid = self.parse_content_id(url)
+            if cid:
                 self.execute(dir=dir, content_id=cid, password=password,
                              progress_callback=progress_callback, cancel_event=cancel_event,
                              name_callback=name_callback, overall_progress_callback=overall_progress_callback,
@@ -749,11 +959,14 @@ class GoFile(metaclass=GoFileMeta):
                 file_dir = os.path.dirname(file)
                 os.makedirs(file_dir, exist_ok=True)
                 size = os.path.getsize(temp) if os.path.exists(temp) else 0
+                proxies = {"http": GOFILE_PROXY, "https": GOFILE_PROXY} if GOFILE_PROXY else None
                 with requests.get(
                     link, headers={
                         "Cookie": f"accountToken={self.token}",
+                        "User-Agent": GOFILE_USER_AGENT,
+                        "Referer": "https://gofile.io/",
                         "Range": f"bytes={size}-"
-                    }, stream=True, timeout=DEFAULT_TIMEOUT
+                    }, stream=True, timeout=DEFAULT_TIMEOUT, proxies=proxies
                 ) as r:
                     r.raise_for_status()
                     total_size = int(r.headers.get("Content-Length", 0)) + size
@@ -838,10 +1051,16 @@ def main() -> None:
     parser.add_argument("-p", type=str, dest="password", help="password")
     args = parser.parse_args()
     out_dir = args.dir if args.dir is not None else "./output"
+
+    def cli_file_progress(f, p, size=None, retry_info=None):
+        if retry_info:
+            logger.info(f"File {f}: {retry_info}")
+        elif p in (100, -2):
+            logger.info(f"File {f} progress: {p}%")
+
     GoFile().execute(dir=out_dir, url=args.url, password=args.password,
-                      progress_callback=lambda p: logger.info(f"Overall progress: {p}%"),
-                      overall_progress_callback=lambda p, eta: logger.info(f"Overall progress: {p}% | ETA: {eta}"),
+                      overall_progress_callback=lambda p, folder: logger.info(f"Overall progress: {p}% | {folder}"),
                       name_callback=lambda name: logger.info(f"Task name set to: {name}"),
-                      file_progress_callback=lambda f, p: logger.info(f"File {f} progress: {p}%"))
+                      file_progress_callback=cli_file_progress)
 if __name__ == "__main__":
     main()

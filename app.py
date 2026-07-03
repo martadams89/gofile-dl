@@ -55,6 +55,13 @@ def get_env_var(var_name: str, default: Any = None, required: bool = False,
     
     return value
 
+# Application version (read from version.txt, falls back to "unknown")
+try:
+    with open(os.path.join(os.path.dirname(__file__), "version.txt")) as _vf:
+        APP_VERSION = _vf.read().strip() or "unknown"
+except OSError:
+    APP_VERSION = "unknown"
+
 # Load configuration
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.yml")
 DEFAULT_CONFIG = {
@@ -184,9 +191,9 @@ def health_check():
     # Application status
     app_info = {
         'status': 'healthy',
-        'active_tasks': sum(1 for task in download_tasks.values() 
+        'active_tasks': sum(1 for task in download_tasks.values()
                           if task.get('status') == 'running' or task.get('status') == 'paused'),
-        'version': '1.0.0',  # Should be dynamically determined in production
+        'version': APP_VERSION,
     }
     
     # Add directory permission info
@@ -196,15 +203,7 @@ def health_check():
         'exists': os.path.exists(base_dir),
         'writable': os.access(base_dir, os.W_OK) if os.path.exists(base_dir) else False,
     }
-    
-    # Add directory permission info
-    base_dir = os.environ.get("BASE_DIR", "/data")
-    dir_info = {
-        'base_dir': base_dir,
-        'exists': os.path.exists(base_dir),
-        'writable': os.access(base_dir, os.W_OK) if os.path.exists(base_dir) else False,
-    }
-    
+
     # Return combined status
     return jsonify({
         'status': 'ok',
@@ -234,18 +233,22 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
     
     download_tasks[task_id]['files'] = []  # each element: {'file': filename, 'progress': 0}
     
-    def file_progress_callback(filename, percentage, size=None):
+    def file_progress_callback(filename, percentage, size=None, retry_info=None):
         file_list = download_tasks[task_id]['files']
         for record in file_list:
             if record['file'] == filename:
                 record['progress'] = percentage
                 if size is not None:  # Update size if provided
                     record['size'] = size
+                if retry_info is not None:
+                    record['retry_info'] = retry_info
                 break
         else:
             new_record = {'file': filename, 'progress': percentage}
             if size is not None:
                 new_record['size'] = size
+            if retry_info is not None:
+                new_record['retry_info'] = retry_info
             file_list.append(new_record)
     
     cancel_event = download_tasks[task_id]['cancel_event']
@@ -302,12 +305,9 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
     strip_emojis = download_tasks[task_id].get('strip_emojis', False)
     incremental = download_tasks[task_id].get('incremental', False)
     folder_pattern = download_tasks[task_id].get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
-    strip_emojis = download_tasks[task_id].get('strip_emojis', False)
-    incremental = download_tasks[task_id].get('incremental', False)
-    folder_pattern = download_tasks[task_id].get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
-    
-    # Get premium token from config
-    premium_token = config.get('premium_token')
+
+    # Use the per-task premium token (falls back to config in start_download)
+    premium_token = download_tasks[task_id].get('premium_token')
     
     try:
         GoFile(premium_token=premium_token).execute(
@@ -337,9 +337,6 @@ def download_task(url: str, directory: Optional[str], password: Optional[str], t
         else:
             download_tasks[task_id]['status'] = "error"
     except Exception as e:
-        error_msg = str(e)
-        print(f"Task {task_id} error: {error_msg}")
-        download_tasks[task_id]['error_message'] = error_msg
         error_msg = str(e)
         print(f"Task {task_id} error: {error_msg}")
         download_tasks[task_id]['error_message'] = error_msg
@@ -389,22 +386,43 @@ def pause(task_id):
 @app.route('/browse', methods=['GET'])
 @requires_auth
 def browse():
-    # Allow browsing from BASE_DIR or fully override to "/"
-    base_dir = os.environ.get("BASE_DIR", "/")
-    rel_path = request.args.get("path", "")
-    target_dir = os.path.join(base_dir, rel_path)
+    # Browse anywhere inside the mounted base directory (whatever is mapped to
+    # BASE_DIR), but never above it. The requested path may arrive as an
+    # absolute path (echoed back from a previous response) or a relative one
+    # (manual entry); both are resolved and then confined to base_dir so
+    # `..` and absolute paths can't escape the mapped volume.
+    base_dir = os.path.realpath(os.environ.get("BASE_DIR", "/data"))
 
-    # Only check directory existence, no further restrictions
+    requested = (request.args.get("path", "") or "").strip()
+    if not requested:
+        target_dir = base_dir
+    else:
+        if not os.path.isabs(requested):
+            requested = os.path.join(base_dir, requested)
+        target_dir = os.path.realpath(requested)
+
+    # Confine to base_dir (base_dir itself or any descendant).
+    try:
+        if os.path.commonpath([base_dir, target_dir]) != base_dir:
+            target_dir = base_dir
+    except ValueError:
+        # Different drives (Windows) or otherwise incomparable paths.
+        target_dir = base_dir
+
     if not os.path.isdir(target_dir):
         return jsonify({"error": "Invalid path"}), 400
 
-    dirs = []
-    for item in os.listdir(target_dir):
-        fullpath = os.path.join(target_dir, item)
-        if os.path.isdir(fullpath):
-            dirs.append(item)
+    dirs = sorted(
+        item for item in os.listdir(target_dir)
+        if os.path.isdir(os.path.join(target_dir, item))
+    )
 
-    return jsonify({"directories": dirs, "current": os.path.abspath(target_dir)})
+    return jsonify({
+        "directories": dirs,
+        "current": target_dir,
+        "base": base_dir,
+        "at_base": target_dir == base_dir,
+    })
 
 @app.route('/start', methods=['POST'])
 @requires_auth
@@ -436,16 +454,7 @@ def start_download():
     # Get premium token (if provided via form, override config)
     premium_token_form = request.form.get('premium_token', '').strip()
     premium_token = premium_token_form if premium_token_form else config.get('premium_token')
-    
-    # Get emoji stripping option
-    strip_emojis = request.form.get('strip_emojis') == 'true'
-    
-    # Get incremental mode option
-    incremental = request.form.get('incremental') == 'true'
-    
-    # Get custom folder pattern for incremental mode
-    folder_pattern = request.form.get('folder_pattern', '⭐NEW FILES in |NEW FILES in |⭐')
-    
+
     if not url:
         return jsonify({"error": "URL is required"}), 400
     
