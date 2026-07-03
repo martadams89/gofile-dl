@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/martadams89/gofile-dl/compare/v1.7.1...v1.8.0) (2026-07-03)
+
+### Features
+
+- update readme ([8f2a9c8](https://github.com/martadams89/gofile-dl/commit/8f2a9c86cf78325c6255c5c0e2099f244ca614a8))
+- update readme ([0b24944](https://github.com/martadams89/gofile-dl/commit/0b24944e6966ed955b63d0a529b7f0a88b83463d))
+
 ## [1.7.1](https://github.com/martadams89/gofile-dl/compare/v1.7.0...v1.7.1) (2026-03-19)
 
 ### Bug Fixes
