@@ -25,16 +25,16 @@ jobs:
         id: rp
         with:
           release-type: simple
-          # A PAT or GitHub App token (RELEASE_TOKEN) is required for the
-          # release PR's merge to trigger this workflow again (pushes made with
-          # the default GITHUB_TOKEN do not trigger workflows). Falls back to
-          # GITHUB_TOKEN so releases still work if it isn't set.
-          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          # Reuse the Renovate PAT/App token: it has contents + pull-requests
+          # write, and using it (instead of the default GITHUB_TOKEN) makes the
+          # release PR's merge re-trigger this workflow so the release actually
+          # gets cut. Falls back to GITHUB_TOKEN if the secret isn't set.
+          token: ${{ secrets.RENOVATE_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Enable auto-merge on the release PR
         if: ${{ steps.rp.outputs.pr }}
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RENOVATE_TOKEN || secrets.GITHUB_TOKEN }}
           RP_PR: ${{ steps.rp.outputs.pr }}
           REPO: ${{ github.repository }}
         run: |

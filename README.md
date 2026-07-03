@@ -480,39 +480,6 @@ docker-compose exec gofile-dl curl -X POST http://localhost:2355/start \
 - The tracking is per content ID, so different GoFile folders are tracked separately
 - Progress shown in the UI is per-subfolder, allowing you to see which folder is currently being processed
 
-## Automated maintenance (hands-off updates & releases)
-
-Dependency updates, merging and releases are fully automated — no human
-interaction is required in the normal case.
-
-**The loop:**
-
-1. **Renovate** ([`.github/renovate.json`](.github/renovate.json)) opens PRs for
-   dependency updates. Non-major updates are batched into a single self-updating
-   PR; majors get their own. Each PR uses a `fix(deps): …` conventional-commit
-   title.
-2. CI (lint + tests + Docker build) runs on the PR. Renovate self-approves it
-   and GitHub's **auto-merge** merges it **only once the required checks pass**
-   (`platformAutomerge`). Failing updates stay open and are rebased/retried
-   ("self-healing").
-3. The merge to `main` triggers **release-please**, which opens/updates a
-   release PR. Because the dependency commits are `fix:`, they bump a patch.
-4. release-please's PR is put into **auto-merge** too; when it merges,
-   release-please cuts the GitHub release + tags and the Docker image is built
-   and published — all automatically.
-
-**One-time setup** (required for a truly hands-off pipeline):
-
-| Requirement                                                                          | Why                                                                                                                                                                                                                                               |
-| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENOVATE_TOKEN` secret (already used)                                               | Lets Renovate open/merge PRs. Its pushes trigger the release workflow.                                                                                                                                                                            |
-| `RELEASE_TOKEN` secret (PAT or GitHub App token, `contents` + `pull-requests` write) | So the release PR's merge **re-triggers** the release workflow. Pushes made with the default `GITHUB_TOKEN` do not trigger workflows. Falls back to `GITHUB_TOKEN` if unset (releases still work, but the final publish may need a manual nudge). |
-| **Settings → General → Allow auto-merge** = on                                       | Required for `platformAutomerge` and the release-PR auto-merge.                                                                                                                                                                                   |
-| **Branch protection on `main` with required status checks** (recommended)            | Makes "merge only if tests pass" enforceable. Prefer required _checks_ over required _reviews_; if you require reviews, run Renovate as a **GitHub App** so its self-approval counts.                                                             |
-
-To disable automerge for a specific ecosystem, add a `packageRule` with
-`"automerge": false`.
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
