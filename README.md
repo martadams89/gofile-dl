@@ -158,25 +158,25 @@ docker-compose up -d
 
 ### Environment Variables Reference
 
-| Variable               | Description                    | Default                   | Example           |
-| ---------------------- | ------------------------------ | ------------------------- | ----------------- |
-| `PORT`                 | Web server port                | `2355`                    | `8080`            |
-| `HOST`                 | Web server host                | `0.0.0.0`                 | `127.0.0.1`       |
-| `BASE_DIR`             | Base directory for downloads   | `/app`                    | `/downloads`      |
-| `CONFIG_DIR`           | Directory for config/tracking  | `/config`                 | `/app/config`     |
-| `SECRET_KEY`           | Flask secret key for sessions  | Random value              | `my-secret-key`   |
-| `DEBUG`                | Enable Flask debug mode        | `false`                   | `true`            |
-| `AUTH_ENABLED`         | Enable basic authentication    | `false`                   | `true`            |
-| `AUTH_USERNAME`        | Authentication username        | `admin`                   | `user`            |
-| `AUTH_PASSWORD`        | Authentication password        | `change-me-in-production` | `secure-password` |
-| `DEFAULT_RETRIES`      | Default retry attempts         | `3`                       | `5`               |
-| `RETRY_DELAY`          | Seconds between retry attempts | `5`                       | `10`              |
-| `GOFILE_PREMIUM_TOKEN` | GoFile premium account token   | `None`                    | `your-token-here` |
-| `GOFILE_WT_SALT`       | Salt for website-token generation (update if GoFile rotates it) | current known value | `9844d94d963d30` |
-| `GOFILE_USER_AGENT`    | User-Agent used for API + token | Chrome UA string         | `Mozilla/5.0 ...` |
-| `GOFILE_LANGUAGE`      | Language used for `X-BL` + token | `en-US`                  | `en-US`           |
-| `GOFILE_PROXY`         | HTTP/SOCKS proxy for GoFile requests (use a clean IP if `api.gofile.io` resets your connection) | `None` | `socks5://user:pass@host:1080` |
-| `GOFILE_IMPERSONATE`   | curl_cffi browser profile (`off` to disable) | `chrome` | `chrome`, `safari`, `off` |
+| Variable               | Description                                                                                     | Default                   | Example                        |
+| ---------------------- | ----------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------ |
+| `PORT`                 | Web server port                                                                                 | `2355`                    | `8080`                         |
+| `HOST`                 | Web server host                                                                                 | `0.0.0.0`                 | `127.0.0.1`                    |
+| `BASE_DIR`             | Base directory for downloads                                                                    | `/app`                    | `/downloads`                   |
+| `CONFIG_DIR`           | Directory for config/tracking                                                                   | `/config`                 | `/app/config`                  |
+| `SECRET_KEY`           | Flask secret key for sessions                                                                   | Random value              | `my-secret-key`                |
+| `DEBUG`                | Enable Flask debug mode                                                                         | `false`                   | `true`                         |
+| `AUTH_ENABLED`         | Enable basic authentication                                                                     | `false`                   | `true`                         |
+| `AUTH_USERNAME`        | Authentication username                                                                         | `admin`                   | `user`                         |
+| `AUTH_PASSWORD`        | Authentication password                                                                         | `change-me-in-production` | `secure-password`              |
+| `DEFAULT_RETRIES`      | Default retry attempts                                                                          | `3`                       | `5`                            |
+| `RETRY_DELAY`          | Seconds between retry attempts                                                                  | `5`                       | `10`                           |
+| `GOFILE_PREMIUM_TOKEN` | GoFile premium account token                                                                    | `None`                    | `your-token-here`              |
+| `GOFILE_WT_SALT`       | Salt for website-token generation (update if GoFile rotates it)                                 | current known value       | `9844d94d963d30`               |
+| `GOFILE_USER_AGENT`    | User-Agent used for API + token                                                                 | Chrome UA string          | `Mozilla/5.0 ...`              |
+| `GOFILE_LANGUAGE`      | Language used for `X-BL` + token                                                                | `en-US`                   | `en-US`                        |
+| `GOFILE_PROXY`         | HTTP/SOCKS proxy for GoFile requests (use a clean IP if `api.gofile.io` resets your connection) | `None`                    | `socks5://user:pass@host:1080` |
+| `GOFILE_IMPERSONATE`   | curl_cffi browser profile (`off` to disable)                                                    | `chrome`                  | `chrome`, `safari`, `off`      |
 
 ### If `api.gofile.io` resets your connection (VPN / cloud / datacenter)
 
@@ -503,12 +503,12 @@ interaction is required in the normal case.
 
 **One-time setup** (required for a truly hands-off pipeline):
 
-| Requirement | Why |
-| ----------- | --- |
-| `RENOVATE_TOKEN` secret (already used) | Lets Renovate open/merge PRs. Its pushes trigger the release workflow. |
+| Requirement                                                                          | Why                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RENOVATE_TOKEN` secret (already used)                                               | Lets Renovate open/merge PRs. Its pushes trigger the release workflow.                                                                                                                                                                            |
 | `RELEASE_TOKEN` secret (PAT or GitHub App token, `contents` + `pull-requests` write) | So the release PR's merge **re-triggers** the release workflow. Pushes made with the default `GITHUB_TOKEN` do not trigger workflows. Falls back to `GITHUB_TOKEN` if unset (releases still work, but the final publish may need a manual nudge). |
-| **Settings → General → Allow auto-merge** = on | Required for `platformAutomerge` and the release-PR auto-merge. |
-| **Branch protection on `main` with required status checks** (recommended) | Makes "merge only if tests pass" enforceable. Prefer required *checks* over required *reviews*; if you require reviews, run Renovate as a **GitHub App** so its self-approval counts. |
+| **Settings → General → Allow auto-merge** = on                                       | Required for `platformAutomerge` and the release-PR auto-merge.                                                                                                                                                                                   |
+| **Branch protection on `main` with required status checks** (recommended)            | Makes "merge only if tests pass" enforceable. Prefer required _checks_ over required _reviews_; if you require reviews, run Renovate as a **GitHub App** so its self-approval counts.                                                             |
 
 To disable automerge for a specific ecosystem, add a `packageRule` with
 `"automerge": false`.

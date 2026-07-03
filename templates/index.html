@@ -127,10 +127,14 @@
     <div class="container content-wrapper my-4">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="d-flex align-items-center gap-3">
-          <span class="brand-logo"><i class="bi bi-cloud-arrow-down-fill"></i></span>
+          <span class="brand-logo"
+            ><i class="bi bi-cloud-arrow-down-fill"></i
+          ></span>
           <div>
             <h1 class="mb-0">GoFile Downloader</h1>
-            <small class="text-muted">Download files &amp; folders from gofile.io</small>
+            <small class="text-muted"
+              >Download files &amp; folders from gofile.io</small
+            >
           </div>
         </div>
         <button
@@ -152,9 +156,10 @@
       <div class="alert alert-info d-flex align-items-start gap-2" role="alert">
         <i class="bi bi-info-circle-fill mt-1"></i>
         <div>
-          <strong>Free accounts work.</strong> No premium token is required &mdash;
-          just paste a GoFile share link below. A premium token (under Advanced
-          Options) only speeds things up and avoids rate limits on large batches.
+          <strong>Free accounts work.</strong> No premium token is required
+          &mdash; just paste a GoFile share link below. A premium token (under
+          Advanced Options) only speeds things up and avoids rate limits on
+          large batches.
         </div>
       </div>
 
@@ -352,7 +357,10 @@
                     <br />
                     <small class="text-muted"
                       >Find your token in your GoFile account settings at
-                      <a href="https://gofile.io/myProfile" target="_blank" rel="noopener"
+                      <a
+                        href="https://gofile.io/myProfile"
+                        target="_blank"
+                        rel="noopener"
                         >gofile.io/myProfile</a
                       ></small
                     >
@@ -960,17 +968,16 @@
         fetch("/pause/" + taskId, { method: "POST" })
           .then((response) => response.json())
           .then((data) => {
-            showToast(
-              `Task ${data.paused ? "paused" : "resumed"}`,
-              "info",
-            );
+            showToast(`Task ${data.paused ? "paused" : "resumed"}`, "info");
             loadTasks();
           })
           .catch(() => showToast("Failed to toggle pause state", "danger"));
       }
       function deleteTask(taskId) {
         if (
-          confirm("Are you sure you want to delete this task's files from disk?")
+          confirm(
+            "Are you sure you want to delete this task's files from disk?",
+          )
         ) {
           fetch("/delete/" + taskId, { method: "POST" })
             .then((response) => response.json())
