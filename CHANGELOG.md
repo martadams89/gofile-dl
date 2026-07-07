@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/martadams89/gofile-dl/compare/v1.8.0...v1.8.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **ci:** remove colliding concurrency group; fix docs-skip condition for PRs ([#151](https://github.com/martadams89/gofile-dl/issues/151)) ([7814a3e](https://github.com/martadams89/gofile-dl/commit/7814a3e4d2bf078974e785bda404eb1f4044fd5a))
+
 ## [1.8.0](https://github.com/martadams89/gofile-dl/compare/v1.7.1...v1.8.0) (2026-07-03)
 
 ### Features
