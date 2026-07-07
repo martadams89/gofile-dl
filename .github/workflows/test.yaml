@@ -31,7 +31,7 @@ jobs:
       # the reusable build-and-push workflow.
       - name: Scan Dockerfile vulnerabilities using Checkov
         id: checkov
-        uses: bridgecrewio/checkov-action@v12.1347.0
+        uses: bridgecrewio/checkov-action@a7683e7b72a04503521247973281ec8142e1ac1f # v12.3112.0
         with:
           directory: .
           framework: dockerfile
