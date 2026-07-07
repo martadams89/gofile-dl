@@ -15,25 +15,20 @@ on:
       - ".github/workflows/**"
   workflow_dispatch:
 
-# Cancel superseded runs on the same branch/PR to save CI minutes.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   lint:
-    if: ${{ !startsWith(github.event.head_commit.message, 'docs') }} # skip on documentation
+    if: ${{ !startsWith(github.event.pull_request.title || github.event.head_commit.message || '', 'docs') }}
     uses: ./.github/workflows/lint.yaml
     secrets: inherit # pass all secrets to the called workflow
 
   test:
-    if: ${{ !startsWith(github.event.head_commit.message, 'docs') }} # skip on documentation
+    if: ${{ !startsWith(github.event.pull_request.title || github.event.head_commit.message || '', 'docs') }}
     uses: ./.github/workflows/test.yaml
     needs: [lint]
     secrets: inherit # pass all secrets to the called workflow
 
   build:
-    if: ${{ !startsWith(github.event.head_commit.message, 'docs') }} # skip on documentation
+    if: ${{ !startsWith(github.event.pull_request.title || github.event.head_commit.message || '', 'docs') }}
     uses: ./.github/workflows/reusable_docker-build-and-push.yaml
     needs: [test]
     secrets: inherit # pass all secrets to the called workflow
