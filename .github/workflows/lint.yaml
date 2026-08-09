@@ -40,7 +40,7 @@ jobs:
       # image is built/validated in the reusable build workflow - neither is
       # duplicated here.
       - name: MegaLinter
-        uses: oxsecurity/megalinter/flavors/python@ef3e84b8b836d76db562d0f3ed7da61e8fd538bc # v9
+        uses: oxsecurity/megalinter/flavors/python@15e5b45552097e318c93de385779ce3b1084052c # v10
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' && contains(fromJSON('["refs/heads/main", "refs/heads/master"]'), github.ref) }}
