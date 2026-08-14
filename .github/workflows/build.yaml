@@ -7,13 +7,18 @@ on:
       - "release-please-**"
   push:
     branches:
-      - "*"
+      - "main"
+      - "develop"
     paths-ignore:
       - README.md
       - CHANGELOG.md
       - version.txt
       - ".github/workflows/**"
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
