@@ -11,6 +11,11 @@
   "platformAutomerge": true,
   "automergeStrategy": "squash",
 
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true
+  },
+
   "semanticCommits": "enabled",
   "semanticCommitType": "fix",
   "semanticCommitScope": "deps",
