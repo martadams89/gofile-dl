@@ -31,14 +31,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # Don't waste time starting Renovate if JSON is invalid
       - name: Validate Renovate JSON
         run: jq type .github/renovate.json
 
       - name: Self-hosted Renovate
-        uses: renovatebot/github-action@98c8f1b0835e163b9fdfc7c86dff40dadc7162ee # v45.0.3
+        uses: renovatebot/github-action@e09d604f8f803bb527bd8321ed5be06c460b8682 # v46.2.2
         with:
           configurationFile: .github/renovate.json
           token: ${{ secrets.RENOVATE_TOKEN }}
@@ -46,8 +46,10 @@ jobs:
           RENOVATE_DRY_RUN: "${{ inputs.dryRun == true }}"
           # Repository taken from variable to keep configuration file generic
           RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_PLATFORM: github
           # Onboarding not needed for self hosted
           RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: required
           # Use GitHub API to create commits (this allows for signed commits from GitHub App)
           RENOVATE_PLATFORM_COMMIT: "true"
           LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
