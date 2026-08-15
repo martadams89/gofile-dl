@@ -170,7 +170,7 @@ docker-compose up -d
 | `DEFAULT_RETRIES`      | Default retry attempts                                                                          | `3`                       | `5`                            |
 | `RETRY_DELAY`          | Seconds between retry attempts                                                                  | `5`                       | `10`                           |
 | `GOFILE_PREMIUM_TOKEN` | GoFile premium account token                                                                    | `None`                    | `your-token-here`              |
-| `GOFILE_WT_SALT`       | Salt for website-token generation (update if GoFile rotates it)                                 | current known value       | `9844d94d963d30`               |
+| `GOFILE_WT_SALT`       | Salt for website-token generation (update if GoFile rotates it)                                 | current known value       | `12af056dacea0b`               |
 | `GOFILE_USER_AGENT`    | User-Agent used for API + token                                                                 | Chrome UA string          | `Mozilla/5.0 ...`              |
 | `GOFILE_LANGUAGE`      | Language used for `X-BL` + token                                                                | `en-US`                   | `en-US`                        |
 | `GOFILE_PROXY`         | HTTP/SOCKS proxy for GoFile requests (use a clean IP if `api.gofile.io` resets your connection) | `None`                    | `socks5://user:pass@host:1080` |
