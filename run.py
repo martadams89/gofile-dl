@@ -103,7 +103,7 @@ GOFILE_USER_AGENT = os.environ.get(
 GOFILE_LANGUAGE = os.environ.get("GOFILE_LANGUAGE", "en-US")
 # Salt currently embedded in wt.obf.js. If GoFile rotates it and downloads start
 # failing with "error-notPremium" again, update this value (or set the env var).
-GOFILE_WT_SALT = os.environ.get("GOFILE_WT_SALT", "9844d94d963d30")
+GOFILE_WT_SALT = os.environ.get("GOFILE_WT_SALT", "12af056dacea0b")
 WT_WINDOW_SECONDS = 14400  # 4-hour rotating window used by GoFile
 
 # Query parameters GoFile's web client now sends on every /contents request.
