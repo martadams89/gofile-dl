@@ -15,10 +15,12 @@ PYTHON_BLACK_ARGUMENTS: "--line-length 100"
 PYTHON_FLAKE8_ARGUMENTS: "--max-line-length 100 --extend-ignore=E203,E501"
 PYTHON_ISORT_ARGUMENTS: "--profile black"
 PYTHON_PYLINT_ARGUMENTS: "--disable=C0103,C0111,R0903,W0212,import-error,no-member --max-line-length=100"
-DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore DL3008 --ignore DL3013 --ignore DL3018 --ignore DL3003"
+# HEALTHCHECK's CMD is intentionally shell-form (needs ${PORT} substitution
+# and the `|| exit 1` fallback, which JSON exec form can't express) — ignore
+# DL3025 alongside the other DL30xx rules already ignored here.
+DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore DL3008 --ignore DL3013 --ignore DL3018 --ignore DL3003 --ignore DL3025"
 
 # Ruff configuration
-PYTHON_RUFF_ARGUMENTS: "--config=.ruff.toml"
 PYTHON_RUFF_FILTER_REGEX_EXCLUDE: '(test_.*\.py)' # Use single quotes to avoid escape issues
 PYTHON_RUFF_DISABLE_ERRORS: true # Don't fail build on ruff errors
 PYTHON_RUFF_DISABLE_ERRORS_IF_LESS_THAN: 10 # Only fail if more than 10 errors
