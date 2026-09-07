@@ -18,7 +18,11 @@ PYTHON_PYLINT_ARGUMENTS: "--disable=C0103,C0111,R0903,W0212,import-error,no-memb
 # HEALTHCHECK's CMD is intentionally shell-form (needs ${PORT} substitution
 # and the `|| exit 1` fallback, which JSON exec form can't express) — ignore
 # DL3025 alongside the other DL30xx rules already ignored here.
-DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore DL3008 --ignore DL3013 --ignore DL3018 --ignore DL3003 --ignore DL3025"
+# DL3066 flags USER appuser for being a name rather than a numeric UID, but
+# appuser is already pinned to a fixed numeric UID (1000) via useradd -u 1000
+# — the resolvability concern DL3066 warns about doesn't apply, and hadolint
+# itself rates this info-level, not something worth hard-failing CI over.
+DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore DL3008 --ignore DL3013 --ignore DL3018 --ignore DL3003 --ignore DL3025 --ignore DL3066"
 
 # Ruff configuration
 PYTHON_RUFF_FILTER_REGEX_EXCLUDE: '(test_.*\.py)' # Use single quotes to avoid escape issues
