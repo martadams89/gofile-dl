@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.8.3](https://github.com/martadams89/gofile-dl/compare/v1.8.2...v1.8.3) (2026-09-07)
+
+### Bug Fixes
+
+- **ci:** ignore hadolint DL3066 (named USER vs numeric UID) ([#187](https://github.com/martadams89/gofile-dl/issues/187)) ([6c6e916](https://github.com/martadams89/gofile-dl/commit/6c6e9168f03499040ade3b39ace4150a3ffaa590))
+
+## [1.8.2](https://github.com/martadams89/gofile-dl/compare/v1.8.1...v1.8.2) (2026-09-02)
+
+### Bug Fixes
+
+- **ci:** stop ruff and hadolint failing the Lint workflow on every push ([#183](https://github.com/martadams89/gofile-dl/issues/183)) ([a5caee8](https://github.com/martadams89/gofile-dl/commit/a5caee86bcf9fcc1dc444b4dd3829d9906607b6d))
+
 ## [1.8.1](https://github.com/martadams89/gofile-dl/compare/v1.8.0...v1.8.1) (2026-07-07)
 
 ### Bug Fixes
